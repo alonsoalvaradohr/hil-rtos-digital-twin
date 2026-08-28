@@ -1,0 +1,25 @@
+[Unit]
+Description=MAGI Wayland Kiosk Compositor (Core 1)
+After=network.target systemd-user-sessions.service magi-ui.service seatd.service
+Wants=magi-ui.service seatd.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=alonso
+Group=alonso
+PAMName=login
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WLR_LIBINPUT_NO_DEVICES=1
+Environment=LIBSEAT_BACKEND=seatd
+Environment=XDG_SESSION_TYPE=wayland
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+ExecStart=/usr/bin/cage -s -- /usr/bin/chromium --kiosk --noerrdialogs --disable-infobars --no-first-run --ozone-platform=wayland --enable-features=OverlayScrollbar --touch-events=enabled http://127.0.0.1:8080/
+Restart=always
+RestartSec=2s
+CPUAffinity=1
+
+[Install]
+WantedBy=graphical.target
