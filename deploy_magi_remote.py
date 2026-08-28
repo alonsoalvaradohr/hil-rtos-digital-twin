@@ -1,4 +1,4 @@
-﻿import paramiko
+import paramiko
 import os
 import time
 
@@ -9,8 +9,12 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect('192.168.100.30', port=22, username='alonso', key_filename=os.path.expanduser('~/.ssh/id_ed25519_hil'), timeout=10)
 
 def run(cmd, use_sudo=False):
+    sudo_pass = os.environ.get('SUDO_PASS', '')
     if use_sudo:
-        full_cmd = f'echo 2077 | sudo -S {cmd}'
+        if sudo_pass:
+            full_cmd = f'echo {sudo_pass} | sudo -S {cmd}'
+        else:
+            full_cmd = f'sudo {cmd}'
     else:
         full_cmd = cmd
     print(f'>>> {full_cmd}')
@@ -29,7 +33,7 @@ run('iw dev wlan0 set power_save off || true', use_sudo=True)
 # 2. Instalación de AntiGravity CLI
 print("[+] Comprobando / Instalando AntiGravity CLI...")
 run('curl -fsSL https://antigravity.google/cli/install.sh | bash || true')
-run('echo 2077 | sudo -S ln -sf [HOME_REDACTED] /usr/local/bin/agy || true')
+run('sudo ln -sf [HOME_REDACTED] /usr/local/bin/agy || true')
 run('[HOME_REDACTED] --version 2>/dev/null || which agy || echo "agy CLI verified"')
 
 # 3. Crear directorios en la Pi

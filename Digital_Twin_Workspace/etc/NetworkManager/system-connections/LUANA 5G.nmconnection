@@ -11,7 +11,7 @@ ssid=LUANA 5G
 [wifi-security]
 auth-alg=open
 key-mgmt=wpa-psk
-psk=Luana#2019
+psk=[REDACTED]
 
 [ipv4]
 method=auto
