@@ -1,0 +1,232 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1024, height=600, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAGI SYSTEM - HMI KIOSK</title>
+    <link rel="stylesheet" href="/static/css/magi.css">
+</head>
+<body>
+
+    <!-- ====================================================================
+         MAGI HEADER
+         ==================================================================== -->
+    <header id="magi-header">
+        <div class="header-left">
+            <div class="header-jp-tag">質問</div>
+            <div class="header-tech-info">
+                <span>CODE : 473</span>
+                <span>FILE : MAGI_SYS</span>
+                <span>SYS  : PREEMPT_RT</span>
+                <span>CORE : 1 (UI/TOUCH)</span>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <div class="system-title">MAGI SYSTEM v2.0</div>
+            <div class="system-subtitle">SUPERCOMPUTER INDUSTRIAL HIL SUPERVISOR</div>
+        </div>
+
+        <div class="header-right">
+            <div class="header-tech-info" style="text-align: right;">
+                <span id="status-ip">192.168.100.30</span>
+                <span id="status-wifi-ssid">LUANA 5G</span>
+                <span id="status-cpu-temp">52.4 °C</span>
+                <span id="status-rt-core" style="color: var(--magi-green);">CORE 3 RT ALIVE</span>
+            </div>
+            <div class="info-box">情報</div>
+            <div class="header-jp-tag-right">解決</div>
+            <button id="btn-open-network" class="btn-network-top">📶 NETWORK</button>
+        </div>
+    </header>
+
+    <!-- Double Header Line -->
+    <div class="divider-double">
+        <div class="line-orange"></div>
+        <div class="line-green"></div>
+    </div>
+
+    <!-- ====================================================================
+         MAIN MAGI OVERVIEW (TRIANGULAR PODS)
+         ==================================================================== -->
+    <main id="magi-main-view">
+        <!-- Central Negative Space MAGI Logo -->
+        <div class="magi-center-logo">
+            <div class="magi-title">MAGI</div>
+            <div class="magi-subtitle">SUPERCOMPUTER SYSTEM</div>
+        </div>
+
+        <!-- Pod 2: BALTHASAR • 2 (Top Center - AntiGravity Terminal) -->
+        <div id="pod-balthasar" class="magi-pod">
+            <div class="pod-name">BALTHASAR • 2</div>
+            <div class="pod-subtext">TERMINAL // ANTIGRAVITY CLI</div>
+        </div>
+
+        <!-- Pod 3: CASPER • 3 (Bottom Left - Plant Emulation) -->
+        <div id="pod-casper" class="magi-pod">
+            <div class="pod-name">CASPER • 3</div>
+            <div class="pod-subtext">PLANT DYNAMICS & CONTROL</div>
+        </div>
+
+        <!-- Pod 1: MELCHIOR • 1 (Bottom Right - Real-Time Telemetry) -->
+        <div id="pod-melchior" class="magi-pod">
+            <div class="pod-name">MELCHIOR • 1</div>
+            <div class="pod-subtext">RTOS TELEMETRY & JITTER</div>
+        </div>
+    </main>
+
+    <!-- ====================================================================
+         SUBVIEW: BALTHASAR • 2 (ANTIGRAVITY CLI COCKPIT)
+         ==================================================================== -->
+    <section id="subview-balthasar" class="magi-subview">
+        <div class="subview-header">
+            <div class="subview-title">BALTHASAR • 2 // ANTIGRAVITY CLI TERMINAL</div>
+            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+        </div>
+        <div class="subview-content" style="padding: 0;">
+            <iframe id="terminal-frame" src="about:blank"></iframe>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         SUBVIEW: CASPER • 3 (PLANT DYNAMICS & CONTROL)
+         ==================================================================== -->
+    <section id="subview-casper" class="magi-subview">
+        <div class="subview-header">
+            <div class="subview-title">CASPER • 3 // HIL PLANT MODEL CONTROLLER</div>
+            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+        </div>
+        <div class="subview-content">
+            <div class="eva-grid-2">
+                <div class="eva-card">
+                    <div class="eva-card-title">MOTOR ACTUATION SETPOINT (rad/s)</div>
+                    <div style="padding: 10px 0;">
+                        <input type="range" id="speed-slider" min="0" max="400" value="150" style="width: 100%; height: 28px; accent-color: var(--magi-orange);" oninput="document.getElementById('slider-val-disp').innerText = this.value + ' rad/s'">
+                        <div id="slider-val-disp" style="text-align: center; font-size: 22px; font-weight: bold; color: var(--magi-orange); margin-top: 8px;">150.0 rad/s</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-motor-enable" class="eva-btn-action" style="flex: 1;">ARRANCAR LAZO RT</button>
+                        <button id="btn-motor-stop" class="eva-btn-action" style="flex: 1; background: #555; color: #FFF;">PARADA CONTROLADA</button>
+                    </div>
+                </div>
+
+                <div class="eva-card">
+                    <div class="eva-card-title">SEGURIDAD Y CONTROL DE SILICIO</div>
+                    <div class="eva-metric"><span>Aislamiento de Silicio:</span> <span class="metric-val">Core 3 (100% RT)</span></div>
+                    <div class="eva-metric"><span>Planificador Kernel:</span> <span class="metric-val">SCHED_FIFO Prio 99</span></div>
+                    <div class="eva-metric"><span>Memoria Bloqueada:</span> <span class="metric-val">mlockall (Unlimited)</span></div>
+                    <button id="btn-motor-estop" class="eva-btn-emergency">PARADA DE EMERGENCIA (E-STOP)</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         SUBVIEW: MELCHIOR • 1 (REAL-TIME TELEMETRY & JITTER)
+         ==================================================================== -->
+    <section id="subview-melchior" class="magi-subview">
+        <div class="subview-header">
+            <div class="subview-title">MELCHIOR • 1 // TELEMETRÍA Y DETERMINISMO</div>
+            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+        </div>
+        <div class="subview-content">
+            <div class="eva-grid-2">
+                <div class="eva-card">
+                    <div class="eva-card-title">MÉTRICAS DETERMINISTAS EN SILICIO (1 kHz)</div>
+                    <div class="eva-metric"><span>Velocidad Angular Medida:</span> <span id="telem-speed" class="metric-val">150.2 rad/s</span></div>
+                    <div class="eva-metric"><span>Corriente de Fase (Ia):</span> <span id="telem-current" class="metric-val">4.20 A</span></div>
+                    <div class="eva-metric"><span>Voltaje Bus DC:</span> <span class="metric-val">48.0 V</span></div>
+                    <div class="eva-metric"><span>Temperatura Etapa Inversor:</span> <span class="metric-val">42.5 °C</span></div>
+                </div>
+
+                <div class="eva-card">
+                    <div class="eva-card-title">ESTABILIDAD TEMPORAL RTOS (PREEMPT_RT)</div>
+                    <div class="eva-metric"><span>Latencia de Ciclo Medida:</span> <span id="telem-latency" class="metric-val">&lt; 12 μs</span></div>
+                    <div class="eva-metric"><span>Jitter Máximo Registrado:</span> <span class="metric-val">8.4 μs</span></div>
+                    <div class="eva-metric"><span>Descartes de Buffer SHM:</span> <span class="metric-val" style="color: var(--magi-green);">0 pkts</span></div>
+                    <div class="eva-metric"><span>Frecuencia de Muestreo:</span> <span class="metric-val">1000.0 Hz (Exact)</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====================================================================
+         MODAL: TACTICAL TOUCH NETWORK & BLUETOOTH MANAGER
+         ==================================================================== -->
+    <div id="network-modal">
+        <div class="network-dialog">
+            <div class="dialog-header">
+                <div class="dialog-tabs">
+                    <button id="tab-btn-wifi" class="tab-btn active">📶 WI-FI ADAPTER</button>
+                    <button id="tab-btn-bt" class="tab-btn">ᛒ BLUETOOTH</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-rescan-wifi" class="eva-btn-action" style="padding: 4px 10px; font-size: 11px;">RE-ESCANEAR</button>
+                    <button id="btn-close-network" class="eva-btn-action" style="padding: 4px 10px; font-size: 11px; background: #444; color: #FFF;">CERRAR</button>
+                </div>
+            </div>
+
+            <div class="dialog-body">
+                <!-- Section Wi-Fi -->
+                <div id="section-wifi">
+                    <!-- Password Input Prompt Box -->
+                    <div id="wifi-connect-prompt" style="display: none; background: #181818; border: 1px solid var(--magi-orange); padding: 12px; border-radius: 4px; margin-bottom: 12px;">
+                        <div style="font-weight: bold; color: var(--magi-orange); margin-bottom: 6px;">
+                            CONECTAR A: <span id="connect-target-ssid" style="color: var(--text-white);"></span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="password" id="wifi-password-input" placeholder="Ingrese contraseña Wi-Fi..." style="flex: 1; padding: 10px; background: #000; border: 1px solid #444; color: #FFF; font-size: 16px; border-radius: 4px;">
+                            <button id="btn-confirm-connect" class="eva-btn-action" style="padding: 10px 16px;">CONECTAR</button>
+                            <button id="btn-cancel-connect" class="eva-btn-action" style="padding: 10px 14px; background: #444; color: #FFF;">CANCELAR</button>
+                        </div>
+                        <div id="wifi-connect-status" style="margin-top: 6px; font-size: 12px; font-family: monospace;"></div>
+                    </div>
+
+                    <div id="wifi-network-list" class="wifi-list">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+
+                <!-- Section Bluetooth -->
+                <div id="section-bluetooth" style="display: none;">
+                    <div id="bt-device-list" class="wifi-list">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         MAGI TACTICAL VIRTUAL KEYBOARD (TOUCH OSK)
+         ==================================================================== -->
+    <div id="magi-virtual-keyboard">
+        <!-- Rendered dynamically by keyboard.js -->
+    </div>
+
+    <!-- Double Footer Line -->
+    <div class="divider-double">
+        <div class="line-green"></div>
+        <div class="line-orange"></div>
+    </div>
+
+    <!-- ====================================================================
+         MAGI FOOTER
+         ==================================================================== -->
+    <footer id="magi-footer">
+        <div class="footer-box">
+            <span class="footer-label">access code :</span>
+            <span class="footer-value">EVA-01-NERV-RTOS</span>
+        </div>
+        <div class="footer-box">
+            <span class="footer-label">question :</span>
+            <span class="footer-value">SYSTEM INTEGRITY & HIL DETERMINISM STATUS</span>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/js/keyboard.js"></script>
+    <script src="/static/js/network.js"></script>
+    <script src="/static/js/magi.js"></script>
+</body>
+</html>

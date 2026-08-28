@@ -1,0 +1,23 @@
+[connection]
+id=LUANA 5G
+uuid=55fa0ed4-a448-41b9-88cc-83b0c7bd0075
+type=wifi
+interface-name=wlan0
+
+[wifi]
+mode=infrastructure
+ssid=LUANA 5G
+
+[wifi-security]
+auth-alg=open
+key-mgmt=wpa-psk
+psk=[REDACTED]
+
+[ipv4]
+method=auto
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+
+[proxy]
