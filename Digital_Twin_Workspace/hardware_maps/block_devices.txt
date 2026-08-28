@@ -1,0 +1,42 @@
+NAME        FSTYPE FSVER LABEL  UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+ram0                                                                                
+ram1                                                                                
+ram2                                                                                
+ram3                                                                                
+ram4                                                                                
+ram5                                                                                
+ram6                                                                                
+ram7                                                                                
+ram8                                                                                
+ram9                                                                                
+ram10                                                                               
+ram11                                                                               
+ram12                                                                               
+ram13                                                                               
+ram14                                                                               
+ram15                                                                               
+loop0       swap   1                                                                
+loop1                                                                               
+loop2                                                                               
+loop3                                                                               
+loop4                                                                               
+loop5                                                                               
+loop6                                                                               
+loop7                                                                               
+mmcblk0                                                                             
+├─mmcblk0p1 vfat   FAT32 bootfs B2F0-82D2                             408.5M    19% /boot/firmware
+└─mmcblk0p2 ext4   1.0   rootfs UUID_ANONYMIZED   15.6G    42% /
+zram0       swap   1     zram0  UUID_ANONYMIZED                [SWAP]
+=== MOUNT TABLE ===
+Filesystem     Type      Size  Used Avail Use% Mounted on
+udev           devtmpfs  7.8G     0  7.8G   0% /dev
+tmpfs          tmpfs     3.2G   12M  3.2G   1% /run
+/dev/mmcblk0p2 ext4       29G   13G   16G  44% /
+tmpfs          tmpfs     7.9G  8.0K  7.9G   1% /dev/shm
+tmpfs          tmpfs     5.0M   12K  5.0M   1% /run/lock
+tmpfs          tmpfs     1.0M     0  1.0M   0% /run/credentials/systemd-journald.service
+tmpfs          tmpfs     7.9G  428K  7.9G   1% /tmp
+/dev/mmcblk0p1 vfat      505M   96M  409M  19% /boot/firmware
+tmpfs          tmpfs     1.0M     0  1.0M   0% /run/credentials/user-host
+tmpfs          tmpfs     1.0M     0  1.0M   0% /run/credentials/user-host
+tmpfs          tmpfs     1.6G   12K  1.6G   1% /run/user/1000

@@ -1,0 +1,13 @@
+crw-rw---- 1 root gpio    254,  0 Jul  9 23:05 /dev/gpiochip0
+crw-rw---- 1 root gpio    254, 10 Jul  9 23:05 /dev/gpiochip10
+crw-rw---- 1 root gpio    254, 11 Jul  9 23:05 /dev/gpiochip11
+crw-rw---- 1 root gpio    254, 12 Jul  9 23:05 /dev/gpiochip12
+crw-rw---- 1 root gpio    254, 13 Jul  9 23:05 /dev/gpiochip13
+lrwxrwxrwx 1 root root          9 Jul  9 23:05 /dev/gpiochip4 -> gpiochip0
+crw-rw---- 1 root gpio    235,  0 Jul  9 23:05 /dev/gpiomem0
+crw-rw---- 1 root gpio    239,  0 Jul  9 23:05 /dev/gpiomem1
+crw-rw---- 1 root gpio    238,  0 Jul  9 23:05 /dev/gpiomem2
+crw-rw---- 1 root gpio    237,  0 Jul  9 23:05 /dev/gpiomem3
+crw-rw---- 1 root gpio    236,  0 Jul  9 23:05 /dev/gpiomem4
+lrwxrwxrwx 1 root root          8 Jul  9 23:05 /dev/serial0 -> ttyAMA10
+crw-rw---- 1 root dialout 204, 74 Jul  9 23:38 /dev/ttyAMA10

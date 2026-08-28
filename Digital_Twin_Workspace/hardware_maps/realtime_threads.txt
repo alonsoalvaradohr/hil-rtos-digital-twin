@@ -1,0 +1,74 @@
+     22      22 FF      99 139   -   0 migration/0
+     27      27 FF      99 139   -   1 migration/1
+     35      35 FF      99 139   -   2 migration/2
+     43      43 FF      99 139   -   3 migration/3
+    959     959 FF      99 139   -   2 rt_motor
+     55      55 FF      50  90   -   0 irq/15-107c013880.mailbox
+     80      80 FF      50  90   -   1 watchdogd
+    107     107 FF      50  90   -   0 irq/38-PCIe PME
+    108     108 FF      50  90   -   0 irq/38-aerdrv
+    109     109 FF      50  90   -   0 irq/38-s-aerdrv
+    110     110 FF      50  90   -   0 irq/38-PCIe bwctrl
+    112     112 FF      50  90   -   1 irq/106-eth%d
+    114     114 FF      50  90   -   0 irq/161-mmc0
+    116     116 FF      50  90   -   0 irq/162-mmc1
+    117     117 FF      50  90   -   0 irq/161-s-mmc0
+    118     118 FF      50  90   -   0 irq/162-s-mmc1
+    123     123 FF      50  90   -   1 irq/140-dw_axi_dmac_platform
+    124     124 FF      50  90   -   0 irq/131-xhci-hcd:usb1
+    125     125 FF      50  90   -   1 irq/136-xhci-hcd:usb3
+    180     180 FF      50  90   -   1 irq/163-107d508200.i2c
+    181     181 FF      50  90   -   1 irq/164-107d508280.i2c
+    472     472 FF      50  90   -   1 irq/158-1f00008000.mailbox
+    492     492 FF      50  90   -   1 irq/165-pwr_button
+    541     541 FF      50  90   -   0 irq/166-v3d_core0
+    542     542 FF      50  90   -   0 irq/167-v3d_hub
+    578     578 FF      50  90   -   0 irq/168-pispbe
+    588     588 FF      50  90   -   0 irq/169-1000800000.codec
+    589     589 FF      50  90   -   0 irq/169-s-1000800000.codec
+    609     609 FF      50  90   -   0 irq/33-ttyS0
+    632     632 FF      50  90   -   1 irq/170-107c580000.hvs
+    633     633 FF      50  90   -   1 irq/171-107c580000.hvs
+    634     634 FF      50  90   -   1 irq/172-107c580000.hvs
+    635     635 FF      50  90   -   1 irq/173-vc4 hdmi hpd connected
+    636     636 FF      50  90   -   1 irq/174-vc4 hdmi hpd disconnected
+    638     638 FF      50  90   -   1 irq/175-vc4 hdmi cec rx
+    639     639 FF      50  90   -   1 irq/175-s-vc4 hdmi cec rx
+    640     640 FF      50  90   -   1 irq/176-vc4 hdmi cec tx
+    641     641 FF      50  90   -   1 irq/176-s-vc4 hdmi cec tx
+    642     642 FF      50  90   -   0 irq/22-DMA IRQ
+    646     646 FF      50  90   -   1 irq/177-vc4 hdmi hpd connected
+    647     647 FF      50  90   -   1 irq/178-vc4 hdmi hpd disconnected
+    649     649 FF      50  90   -   1 irq/179-vc4 hdmi cec rx
+    650     650 FF      50  90   -   1 irq/179-s-vc4 hdmi cec rx
+    651     651 FF      50  90   -   1 irq/180-vc4 hdmi cec tx
+    652     652 FF      50  90   -   1 irq/180-s-vc4 hdmi cec tx
+    653     653 FF      50  90   -   0 irq/23-DMA IRQ
+    654     654 FF      50  90   -   1 irq/181-107c500000.mop
+    655     655 FF      50  90   -   1 irq/182-107c501000.moplet
+    656     656 FF      50  90   -   0 irq/183-vc4 crtc
+    657     657 FF      50  90   -   0 irq/184-vc4 crtc
+    658     658 FF      50  90   -   1 card1-crtc0
+    659     659 FF      50  90   -   1 card1-crtc1
+    660     660 FF      50  90   -   1 card1-crtc2
+    661     661 FF      50  90   -   1 card1-crtc3
+    941     941 FF      50  90   -   0 irq/16-uart-pl011
+     15      15 FF       1  41   -   0 ktimers/0
+     17      17 FF       1  41   -   1 rcu_preempt
+     18      18 FF       1  41   -   1 rcub/0
+     20      20 FF       1  41   -   0 rcuc/0
+     23      23 FF       1  41   -   0 irq_work/0
+     26      26 FF       1  41   -   1 irq_work/1
+     28      28 FF       1  41   -   1 rcuc/1
+     29      29 FF       1  41   -   1 ktimers/1
+     34      34 FF       1  41   -   2 irq_work/2
+     36      36 FF       1  41   -   2 rcuc/2
+     37      37 FF       1  41   -   2 ktimers/2
+     42      42 FF       1  41   -   3 irq_work/3
+     44      44 FF       1  41   -   3 rcuc/3
+     45      45 FF       1  41   -   3 ktimers/3
+     14      14 TS       -  19   0   0 ksoftirqd/0
+     30      30 TS       -  19   0   1 ksoftirqd/1
+     38      38 TS       -  19   0   2 ksoftirqd/2
+     46      46 TS       -  19   0   3 ksoftirqd/3
+     84      84 TS       -  39 -20   1 kworker/R-xprtiod
