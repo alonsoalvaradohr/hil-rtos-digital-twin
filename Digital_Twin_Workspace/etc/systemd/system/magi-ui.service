@@ -1,0 +1,27 @@
+﻿[Unit]
+Description=MAGI SYSTEM HMI Backend & Touch Network Manager (Core 1)
+Documentation=file:///E:/alons/Documents/Raspberry%20HIL/docs/ARCHITECTURE.md
+After=network.target syslog.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+WorkingDirectory=[HOME_REDACTED]
+ExecStart=/usr/bin/python3 [HOME_REDACTED]
+Restart=always
+RestartSec=1s
+
+# Aislamiento Estricto en Core 1 (Dominio Gráfico y UI)
+CPUAffinity=1
+CPUQuota=80%
+LimitNOFILE=65536
+
+# Permisos y Protección
+UMask=0022
+KillMode=process
+TimeoutStopSec=3s
+
+[Install]
+WantedBy=multi-user.target

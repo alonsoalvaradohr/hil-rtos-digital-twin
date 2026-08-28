@@ -1,0 +1,598 @@
+﻿/* ==========================================================================
+   NEON GENESIS EVANGELION - MAGI SYSTEM HMI STYLESHEET
+   Resolution: 1024x600 (7-inch Touch Display Kiosk)
+   Dedicated Core 1 UI
+   ========================================================================== */
+
+:root {
+    --bg-black: #000000;
+    --magi-cyan: #4FC3F7;
+    --magi-cyan-active: #81D4FA;
+    --magi-orange: #FF9900;
+    --magi-orange-dark: #CC7A00;
+    --magi-green: #00FF66;
+    --magi-red: #FF3333;
+    --text-white: #FFFFFF;
+    --text-black: #000000;
+    --panel-dark: #0A0A0A;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+body {
+    width: 1024px;
+    height: 600px;
+    background-color: var(--bg-black);
+    color: var(--text-white);
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic Pro', 'Meiryo', sans-serif;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ==========================================================================
+   HEADER SECTION
+   ========================================================================== */
+#magi-header {
+    height: 70px;
+    padding: 6px 16px 4px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-jp-tag {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 2px;
+}
+
+.header-tech-info {
+    display: flex;
+    flex-direction: column;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: var(--magi-orange);
+    line-height: 1.2;
+}
+
+.header-center {
+    text-align: center;
+}
+
+.system-title {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    color: var(--magi-orange);
+    text-transform: uppercase;
+}
+
+.system-subtitle {
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--magi-green);
+    letter-spacing: 1px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-jp-tag-right {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 2px;
+}
+
+.info-box {
+    background-color: var(--magi-cyan);
+    color: var(--text-black);
+    font-weight: 900;
+    font-size: 16px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+}
+
+.btn-network-top {
+    background: transparent;
+    border: 2px solid var(--magi-orange);
+    color: var(--magi-orange);
+    font-size: 12px;
+    font-weight: 900;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-network-top:active {
+    background: var(--magi-orange);
+    color: var(--text-black);
+}
+
+/* Double separator lines */
+.divider-double {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.line-orange {
+    height: 2px;
+    background-color: var(--magi-orange);
+    width: 100%;
+}
+
+.line-green {
+    height: 2px;
+    background-color: var(--magi-green);
+    width: 100%;
+}
+
+/* ==========================================================================
+   MAIN TRIANGULAR GEOMETRY (MAGI PODS)
+   ========================================================================== */
+#magi-main-view {
+    height: 450px;
+    position: relative;
+    padding: 10px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Central Negative Space MAGI Logo */
+.magi-center-logo {
+    position: absolute;
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.magi-title {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: 8px;
+    color: var(--magi-orange);
+    text-shadow: 0 0 10px rgba(255, 153, 0, 0.4);
+}
+
+.magi-subtitle {
+    font-size: 9px;
+    font-family: monospace;
+    letter-spacing: 4px;
+    color: var(--magi-green);
+    margin-top: -6px;
+}
+
+/* POD BUTTONS (BALTHASAR, CASPER, MELCHIOR) */
+.magi-pod {
+    position: absolute;
+    background-color: var(--magi-cyan);
+    color: var(--text-black);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+    transition: transform 0.1s, background-color 0.1s;
+}
+
+.magi-pod:active {
+    background-color: var(--magi-cyan-active);
+    transform: scale(0.98);
+}
+
+.pod-name {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: 3px;
+    font-family: 'Arial Black', Impact, sans-serif;
+}
+
+.pod-subtext {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+    opacity: 0.85;
+}
+
+/* Pod 2: BALTHASAR • 2 (Top Center - AntiGravity CLI Terminal) */
+#pod-balthasar {
+    width: 420px;
+    height: 140px;
+    top: 15px;
+    left: 302px;
+    clip-path: polygon(15px 0%, calc(100% - 15px) 0%, 100% 15px, 100% calc(100% - 25px), calc(100% - 30px) 100%, 30px 100%, 0% calc(100% - 25px), 0% 15px);
+}
+
+/* Pod 3: CASPER • 3 (Bottom Left - Plant & Emulation) */
+#pod-casper {
+    width: 380px;
+    height: 155px;
+    bottom: 25px;
+    left: 45px;
+    clip-path: polygon(0% 25px, 25px 0%, calc(100% - 35px) 0%, 100% 35px, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0% 100%);
+}
+
+/* Pod 1: MELCHIOR • 1 (Bottom Right - Real-Time Telemetry) */
+#pod-melchior {
+    width: 380px;
+    height: 155px;
+    bottom: 25px;
+    right: 45px;
+    clip-path: polygon(35px 0%, calc(100% - 25px) 0%, 100% 25px, 100% 100%, 15px 100%, 0% calc(100% - 15px), 0% 35px);
+}
+
+/* ==========================================================================
+   FOOTER SECTION
+   ========================================================================== */
+#magi-footer {
+    height: 70px;
+    padding: 6px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.footer-box {
+    flex: 1;
+    height: 42px;
+    border: 2px solid var(--magi-orange);
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255, 153, 0, 0.05);
+}
+
+.footer-label {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.footer-value {
+    font-size: 14px;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: var(--magi-green);
+    letter-spacing: 1px;
+}
+
+/* ==========================================================================
+   FULLSCREEN SUB-VIEWS (TERMINAL, CASPER, MELCHIOR)
+   ========================================================================== */
+.magi-subview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1024px;
+    height: 600px;
+    background-color: var(--bg-black);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+}
+
+.subview-header {
+    height: 55px;
+    background: #080808;
+    border-bottom: 2px solid var(--magi-orange);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px;
+}
+
+.subview-title {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: var(--magi-cyan);
+}
+
+.btn-return-magi {
+    background: var(--magi-orange);
+    color: var(--text-black);
+    border: none;
+    font-size: 14px;
+    font-weight: 900;
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-return-magi:active {
+    background: var(--magi-orange-dark);
+}
+
+.subview-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background: #050505;
+}
+
+/* Terminal iframe */
+#terminal-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #000;
+}
+
+/* Telemetry & Control Cards */
+.eva-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    height: 100%;
+}
+
+.eva-card {
+    background: #0D0D0D;
+    border: 1px solid #333;
+    border-top: 3px solid var(--magi-cyan);
+    padding: 16px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.eva-card-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 1px;
+    border-bottom: 1px solid #222;
+    padding-bottom: 6px;
+}
+
+.eva-metric {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-family: monospace;
+}
+
+.metric-val {
+    color: var(--magi-green);
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.eva-btn-action {
+    background: var(--magi-cyan);
+    color: var(--text-black);
+    border: none;
+    font-size: 14px;
+    font-weight: 900;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.eva-btn-action:active {
+    background: var(--magi-cyan-active);
+}
+
+.eva-btn-emergency {
+    background: var(--magi-red);
+    color: var(--text-white);
+    border: none;
+    font-size: 16px;
+    font-weight: 900;
+    padding: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 2px;
+}
+
+/* ==========================================================================
+   NETWORK & SETTINGS MODAL
+   ========================================================================== */
+#network-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1024px;
+    height: 600px;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 200;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.network-dialog {
+    width: 780px;
+    height: 480px;
+    background: #0A0A0A;
+    border: 2px solid var(--magi-orange);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 30px rgba(255, 153, 0, 0.3);
+}
+
+.dialog-header {
+    height: 48px;
+    background: #111;
+    border-bottom: 2px solid var(--magi-orange);
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dialog-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.tab-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #AAA;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 6px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: var(--magi-orange);
+    color: var(--text-black);
+    border-color: var(--magi-orange);
+}
+
+.dialog-body {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.wifi-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.wifi-item {
+    background: #141414;
+    border: 1px solid #282828;
+    padding: 10px 14px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.wifi-item:active {
+    background: #222;
+    border-color: var(--magi-cyan);
+}
+
+.wifi-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--text-white);
+}
+
+.wifi-sec {
+    font-size: 11px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.wifi-signal {
+    font-size: 13px;
+    color: var(--magi-green);
+    font-family: monospace;
+}
+
+/* ==========================================================================
+   TACTICAL TOUCH VIRTUAL KEYBOARD (MAGI OSK)
+   ========================================================================== */
+#magi-virtual-keyboard {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 1024px;
+    height: 230px;
+    background: #0D0D0D;
+    border-top: 3px solid var(--magi-orange);
+    z-index: 300;
+    display: none;
+    flex-direction: column;
+    padding: 8px 12px;
+    gap: 6px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.kb-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.kb-key {
+    flex: 1;
+    max-width: 78px;
+    background: #202020;
+    color: var(--text-white);
+    border: 1px solid #3A3A3A;
+    border-radius: 4px;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.08s;
+}
+
+.kb-key:active {
+    background: var(--magi-orange);
+    color: var(--text-black);
+}
+
+.kb-key-wide {
+    flex: 1.6;
+    max-width: 120px;
+    background: #2A2A2A;
+    font-size: 13px;
+}
+
+.kb-key-space {
+    flex: 4;
+    max-width: 320px;
+}
+
+.kb-key-enter {
+    background: var(--magi-cyan);
+    color: var(--text-black);
+    font-size: 14px;
+}
