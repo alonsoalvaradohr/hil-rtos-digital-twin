@@ -1,7 +1,7 @@
-﻿# GIT GOVERNANCE AUDIT — HIL-RTOS Digital Twin & Hypervisor
+# GIT GOVERNANCE AUDIT — HIL-RTOS Digital Twin & Hypervisor
 
 **Repositorio:** `hil-rtos-digital-twin`
-**Remoto:** `https://github.com/[GITHUB_USER]/hil-rtos-digital-twin` (PRIVATE)
+**Remoto:** `https://github.com/alonsoalvaradohr/hil-rtos-digital-twin` (PRIVATE)
 **Estrategia de Ramas:** GitFlow
 **Version Inicial:** v6.1.0
 **Fecha de Inicializacion:** 2026-08-28
@@ -13,12 +13,12 @@
 | Agente | Rol | Estado |
 |:---|:---|:---:|
 | DELTA | Estratega de Infraestructura | APROBADO |
-| EPSILON | Inspector de Diffs y SecOps | VETO LEVANTADO |
+| EPSILON | Inspector de Diffs y SecOps | VETO LEVANTADO TRAS FISCALIZACIÓN |
 | ZETA | Cronista / Ejecutor | EJECUTANDO |
 
 ---
 
-## Registro de Gobernanza
+## Registro de Gobernanza y Fiscalización
 
 | Bloque / Archivo | Fase / Agente | Accion Git (Hash / Rama / Tag) | Resultado y Consenso |
 | :--- | :--- | :--- | :--- |
@@ -32,7 +32,9 @@
 | Digital_Twin_Workspace/boot+hardware | Fase 2 / ZETA | commit-06 feat(digital-twin) | DELTA OK EPSILON OK ZETA OK |
 | Digital_Twin_Workspace/etc+home | Fase 2 / ZETA | commit-07 feat(digital-twin) | DELTA OK EPSILON OK ZETA OK |
 | Scripts Python | Fase 2 / ZETA | commit-08 feat(tooling) | DELTA OK EPSILON OK ZETA OK |
-| Tag v6.1.0 | Fase 2 / ZETA | git tag -a v6.1.0 | DELTA OK EPSILON OK ZETA OK |
+| Forensic Audit & Sanitization | Fase 2.1 / EPSILON+ZETA | fix(security): remediate residual secrets | EPSILON FORENSIC PASS OK |
+| README.md Operator Docs | Fase 2.1 / DELTA+ZETA | docs: add lab operator runbook | DELTA OK ZETA OK |
+| Tag v6.1.0 (re-aligned) | Fase 2.1 / ZETA | git tag -a v6.1.0 -f | DELTA OK EPSILON OK ZETA OK |
 | origin/main | Fase 3 / ZETA | git push -u origin main | SINCRONIZACION OK |
 | origin/develop | Fase 3 / ZETA | git push -u origin develop | SINCRONIZACION OK |
 | origin/tags/v6.1.0 | Fase 3 / ZETA | git push origin v6.1.0 | DEPLOYED OK |
@@ -41,6 +43,8 @@
 
 ## Actualizacion para Tecnicos de Laboratorio
 
+```bash
 git checkout main && git pull origin main          # stable / deployed
 git checkout develop && git pull origin develop    # test
 python introspect.py && python sync_digital_twin.py && python generate_state_of_art.py
+```
