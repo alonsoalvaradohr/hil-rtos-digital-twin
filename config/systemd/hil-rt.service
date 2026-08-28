@@ -1,0 +1,31 @@
+﻿[Unit]
+Description=HIL Motor de Tiempo Real Determinista (Core 3 PREEMPT_RT)
+Documentation=file:///E:/alons/Documents/Raspberry%20HIL/docs/ARCHITECTURE.md
+After=syslog.target network.target hil-ipc.service
+Wants=hil-ipc.service
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+WorkingDirectory=[HOME_REDACTED]
+ExecStart=[HOME_REDACTED]
+Restart=always
+RestartSec=1s
+
+# Privilegios y Políticas de Silicio para Tiempo Real Duro
+LimitMEMLOCK=infinity
+LimitRTPRIO=99
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=99
+CPUAffinity=3
+
+# Protección de Entorno
+UMask=0022
+KillMode=process
+TimeoutStopSec=3s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+﻿[Unit]
+Description=MAGI BALTHASAR Web Terminal Server (AntiGravity CLI / Core 1)
+Documentation=file:///E:/alons/Documents/Raspberry%20HIL/docs/ARCHITECTURE.md
+After=network.target syslog.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+WorkingDirectory=[HOME_REDACTED]
+ExecStart=/usr/local/bin/ttyd -W -p 7681 -t fontSize=18 -t theme={"background":"#000000","foreground":"#FF9900","cursor":"#00FF66"} -t enableZmodem=true bash -l
+Restart=always
+RestartSec=1s
+
+# Aislamiento Estricto en Core 1 (Dominio Gráfico y Terminal)
+CPUAffinity=1
+CPUQuota=80%
+LimitNOFILE=65536
+
+# Permisos y Protección
+UMask=0022
+KillMode=process
+TimeoutStopSec=3s
+
+[Install]
+WantedBy=multi-user.target

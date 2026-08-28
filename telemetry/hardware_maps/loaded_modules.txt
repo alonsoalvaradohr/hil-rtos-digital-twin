@@ -1,0 +1,68 @@
+Module                  Size  Used by
+rfcomm                 57344  2
+algif_hash             12288  1
+algif_skcipher         12288  1
+af_alg                 28672  6 algif_hash,algif_skcipher
+bnep                   24576  2
+vc4                   417792  4
+snd_soc_hdmi_codec     20480  2
+drm_exec               16384  1 vc4
+drm_display_helper     28672  1 vc4
+cec                    53248  1 vc4
+binfmt_misc            16384  1
+drm_dma_helper         24576  2 vc4
+brcmfmac_cyw           12288  0
+brcmfmac              376832  1 brcmfmac_cyw
+drm_client_lib         12288  1 vc4
+hci_uart               53248  0
+btbcm                  24576  1 hci_uart
+bluetooth             675840  27 hci_uart,btbcm,bnep,rfcomm
+brcmutil               24576  1 brcmfmac
+snd_soc_core          299008  2 vc4,snd_soc_hdmi_codec
+aes_ce_blk             32768  4
+rpi_hevc_dec           49152  0
+aes_ce_cipher          12288  1 aes_ce_blk
+ghash_ce               20480  0
+cfg80211             1085440  2 brcmfmac_cyw,brcmfmac
+pisp_be                28672  0
+snd_compress           24576  1 snd_soc_core
+ecdh_generic           16384  2 bluetooth
+v4l2_mem2mem           45056  1 rpi_hevc_dec
+gf128mul               12288  1 ghash_ce
+ecc                    40960  1 ecdh_generic
+snd_pcm_dmaengine      16384  1 snd_soc_core
+snd_pcm               167936  4 snd_soc_hdmi_codec,snd_compress,snd_soc_core,snd_pcm_dmaengine
+videobuf2_dma_contig    20480  2 pisp_be,rpi_hevc_dec
+videobuf2_memops       12288  1 videobuf2_dma_contig
+snd_timer              40960  1 snd_pcm
+videobuf2_v4l2         32768  3 pisp_be,rpi_hevc_dec,v4l2_mem2mem
+raspberrypi_hwmon      12288  0
+joydev                 24576  0
+rfkill                 32768  6 bluetooth,cfg80211
+v3d                   184320  0
+snd                   122880  5 snd_soc_hdmi_codec,snd_timer,snd_compress,snd_soc_core,snd_pcm
+videodev              323584  4 pisp_be,rpi_hevc_dec,videobuf2_v4l2,v4l2_mem2mem
+gpu_sched              61440  1 v3d
+videobuf2_common       73728  6 pisp_be,rpi_hevc_dec,videobuf2_dma_contig,videobuf2_v4l2,v4l2_mem2mem,videobuf2_memops
+hid_multitouch         28672  0
+gpio_keys              20480  0
+drm_shmem_helper       32768  1 v3d
+mc                     69632  6 videodev,pisp_be,rpi_hevc_dec,videobuf2_v4l2,videobuf2_common,v4l2_mem2mem
+drm_kms_helper        233472  4 drm_dma_helper,vc4,drm_shmem_helper,drm_client_lib
+rp1_pio                40960  0
+rp1_fw                 16384  1 rp1_pio
+raspberrypi_gpiomem    12288  0
+rp1_mailbox            12288  1
+rp1_adc                12288  0
+nvmem_rmem             12288  0
+sch_fq_codel           20480  3
+zram                   40960  1
+lz4_compress           24576  1 zram
+drm                   716800  10 gpu_sched,drm_kms_helper,drm_exec,drm_dma_helper,v3d,vc4,drm_shmem_helper,drm_display_helper,drm_client_lib
+fuse                  196608  1
+drm_panel_orientation_quirks    32768  1 drm
+backlight              24576  2 drm_kms_helper,drm
+nfnetlink              20480  1
+ipv6                  610304  50
+libsha1                20480  1 ipv6
+i2c_brcmstb            12288  0

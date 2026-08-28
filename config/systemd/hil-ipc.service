@@ -1,0 +1,29 @@
+﻿[Unit]
+Description=HIL Demonio Traductor IPC (MQTT <-> RAM Lock-Free)
+Documentation=file:///E:/alons/Documents/Raspberry%20HIL/docs/ARCHITECTURE.md
+After=syslog.target network.target mosquitto.service
+Wants=mosquitto.service
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+WorkingDirectory=[HOME_REDACTED]
+ExecStart=[HOME_REDACTED]
+Restart=always
+RestartSec=1s
+
+# Aislamiento en Núcleos de Housekeeping (Cores 0 y 1)
+CPUAffinity=0 1
+CPUQuota=80%
+LimitNOFILE=65536
+
+# Protección de Entorno
+UMask=0022
+KillMode=process
+TimeoutStopSec=3s
+
+[Install]
+WantedBy=multi-user.target

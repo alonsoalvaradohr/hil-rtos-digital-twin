@@ -1,0 +1,14 @@
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M
+    |__ Port 001: Dev 002, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M
+/:  Bus 003.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M
+    |__ Port 002: Dev 002, If 0, Class=Human Interface Device, Driver=usbhid, 1.5M
+    |__ Port 002: Dev 002, If 1, Class=Human Interface Device, Driver=usbhid, 1.5M
+/:  Bus 004.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M
+=== USB DEVICES ===
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 001 Device 002: ID 0484:5750 Specialix MPI7003
+Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 003 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+Bus 003 Device 002: ID 04d9:a01c Holtek Semiconductor, Inc. wireless multimedia keyboard with trackball [Trust ADURA 17911]
+Bus 004 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
