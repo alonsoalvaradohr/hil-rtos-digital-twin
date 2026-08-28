@@ -38,6 +38,7 @@
 | origin/main | Fase 3 / ZETA | git push -u origin main | SINCRONIZACION OK |
 | origin/develop | Fase 3 / ZETA | git push -u origin develop | SINCRONIZACION OK |
 | origin/tags/v6.1.0 | Fase 3 / ZETA | git push origin v6.1.0 | DEPLOYED OK |
+| Phase 8 Ontological Refactor | Fase 8 / ONTO+SCRIBE+LINT+GRAPH | refactor: canonical hierarchy & master docs | ONTO OK LINT OK SCRIBE OK GRAPH OK |
 
 ---
 
