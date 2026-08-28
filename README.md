@@ -1,4 +1,4 @@
-﻿# MASTER REPOSITORY: HIL-RTOS DIGITAL TWIN & REAL-TIME HYPERVISOR
+# MASTER REPOSITORY: HIL-RTOS DIGITAL TWIN & REAL-TIME HYPERVISOR
 
 ## 1. Visión General del Proyecto
 Este repositorio alberga la infraestructura de software, gobernanza agéntica, herramientas de introspección profunda y el **Gemelo Digital** para el banco de pruebas **Hardware-in-the-Loop (HIL)** basado en **Raspberry Pi 5 (BCM2712 - 4x Cortex-A76)** ejecutando un kernel determinista de tiempo real (**Debian GNU/Linux 13 Trixie / SMP PREEMPT_RT**).
@@ -35,3 +35,22 @@ El propósito principal es dotar al sistema de capacidades de simulación y emul
 3. **No Interferencia en Silicio:** Preservación inmutable de afinidades de interrupciones, estados C y P de la CPU, y gobernadores de reloj fijos para eliminar el jitter introducido por ahorro de energía.
 4. **Resiliencia en Comunicaciones:** Enlace dual redundante (Ethernet físico directo de baja latencia + Wi-Fi 5 GHz para telemetría y acceso administrativo).
 5. **Gobernanza Agéntica Autónoma:** Protocolos O-I-P-E-V-R con auto-aprobación y auditoría no repudiable en `COMMAND_EXECUTION_AUDIT.md`.
+
+---
+
+## 4. Instrucciones de Operación y Sincronización Rápida (Laboratorio)
+
+### Obtener Línea de Vida Estable (Producción / Deployed):
+```bash
+git checkout main && git pull origin main
+```
+
+### Obtener Línea de Vida de Pruebas (Test / RC):
+```bash
+git checkout develop && git pull origin develop
+```
+
+### Regenerar Telemetría y Sincronización del Gemelo Digital:
+```bash
+python introspect.py && python sync_digital_twin.py && python generate_state_of_art.py
+```
