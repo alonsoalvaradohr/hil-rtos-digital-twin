@@ -87,3 +87,4 @@ user_run("chmod +x /home/alonso/start_kiosk_local.sh")
 print("[OK] Script ~/start_kiosk_local.sh listo para ejecución en consola física.")
 
 client.close()
+

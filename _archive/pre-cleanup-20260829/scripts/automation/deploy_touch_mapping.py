@@ -107,3 +107,4 @@ user_run("chmod +x /home/alonso/start_kiosk_local.sh")
 print("[OK] rc.xml y ~/start_kiosk_local.sh actualizados con éxito en la Raspberry Pi 5.")
 
 client.close()
+
