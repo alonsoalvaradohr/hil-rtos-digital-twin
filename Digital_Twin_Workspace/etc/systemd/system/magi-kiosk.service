@@ -7,16 +7,21 @@ Conflicts=getty@tty1.service
 [Service]
 User=alonso
 Group=alonso
+SupplementaryGroups=video input render tty dialout bluetooth
 PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=WLR_BACKENDS=drm
 Environment=WLR_RENDERER=gles2
 Environment=WLR_NO_HARDWARE_CURSORS=1
 Environment=LIBSEAT_BACKEND=seatd
 Environment=XDG_SESSION_TYPE=wayland
-StandardInput=null
-StandardOutput=journal
-StandardError=journal
 ExecStart=/usr/bin/cage -s -- /usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=OverlayScrollbar,TouchTextSelection --touch-events=enabled --enable-touch-drag-drop --disable-translate --disable-features=Translate,OptimizationHints --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/
 Restart=always
 RestartSec=2s
