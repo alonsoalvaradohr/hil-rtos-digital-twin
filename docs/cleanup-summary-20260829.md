@@ -3,66 +3,59 @@
 - **Fecha:** 2026-08-29
 - **Tag de Seguridad Previo:** `pre-cleanup-20260829`
 - **Tag de Versión Estable:** `v1.0-stable`
-- **Rama:** `feature/phase9.5-ultimate-forensic-fix` (Consolidada para merge canónico)
+- **Rama Canónica:** `main` (Merge `--no-ff` completado)
 
 ---
 
-## 1. Índice de Documentos y Artefactos Producidos
+## 1. Índice de Documentos y Artefactos Canónicos
 
 1. **Post-Mortem del Incidente de Entrada:**
    - [`docs/postmortem/2026-08-29-touch-input-outage.md`](file:///e:/alons/Documents/Raspberry%20HIL/docs/postmortem/2026-08-29-touch-input-outage.md)
-   - Documenta síntoma, impacto, causa raíz (`WLR_BACKENDS=drm` sin `libinput`), corrección aplicada, secuencia de diagnóstico y falsas hipótesis descartadas.
-
 2. **Estado Canónico Congelado (Hardware Real):**
    - Directorio: [`docs/canonical-state/`](file:///e:/alons/Documents/Raspberry%20HIL/docs/canonical-state/)
-   - Archivos:
-     - `labwc.environment.known-good`
-     - `labwc.rc.xml.known-good`
-     - `magi-kiosk.service.known-good`
-     - `seatd.service.known-good`
-     - `hardware-verification-status.txt`
-     - `full-file-inventory.txt`
-
 3. **Registro de Clasificación y Auditoría Archivo por Archivo:**
    - [`docs/cleanup-log.md`](file:///e:/alons/Documents/Raspberry%20HIL/docs/cleanup-log.md)
-   - 175 archivos clasificados bajo las categorías canónicas (`CANÓNICO`, `DUPLICADO OBSOLETO`, `SCRIPT DE DIAGNÓSTICO DE UNA SOLA VEZ`, `CÓDIGO ZOMBIE`).
-
 4. **Estructura Canónica del Repositorio:**
    - [`docs/repo-structure.md`](file:///e:/alons/Documents/Raspberry%20HIL/docs/repo-structure.md)
-   - Define la distribución oficial de `/src`, `/config`, `/docs`, `/scripts` y `/_archive`.
-
 5. **Backlog de Deuda Técnica y Hoja de Ruta:**
    - [`docs/backlog.md`](file:///e:/alons/Documents/Raspberry%20HIL/docs/backlog.md)
-   - Registra deudas técnicas detectadas, medidas preventivas y épicas del roadmap HIL-RTOS.
-
 6. **Runbook de Diagnóstico del Subsistema de Entrada:**
    - [`docs/runbook-input-debugging.md`](file:///e:/alons/Documents/Raspberry%20HIL/docs/runbook-input-debugging.md)
-   - Secuencia atómica de 5 pasos por capas de abajo hacia arriba.
-
 7. **Script de Verificación Automatizado:**
    - [`scripts/verify-input-stack.sh`](file:///e:/alons/Documents/Raspberry%20HIL/scripts/verify-input-stack.sh)
-   - Script POSIX ejecutable en el hardware target para certificar el stack de entrada y wlroots.
-
 8. **Directivas para Agentes Antigravity:**
    - [`AGENTS.md`](file:///e:/alons/Documents/Raspberry%20HIL/AGENTS.md)
-   - Normas estrictas de verificación obligatoria con output literal, aislamiento de cambios y mantenimiento mensual.
 
 ---
 
-## 2. Acciones Ejecutadas
+## 2. Adenda de Subsanación — 2026-08-29 (Auditoría de la Consolidación)
 
-1. **Extracción de Estado Canónico:** Se conectó vía SSH/SFTP a la Raspberry Pi 5 (`AlonsoRTOS`, 192.168.100.30) y se extrajeron las configuraciones activas y demostradas en hardware real hacia `docs/canonical-state/`.
-2. **Generación de Tag de Seguridad:** Se fijó `git tag pre-cleanup-20260829` antes de mover archivos.
-3. **Auditoría Exhaustiva:** Se inspeccionaron los 175 archivos del árbol del repositorio, determinando referencias cruzadas con `ripgrep`.
-4. **Purga Segura a Archivo Histórico:** Se trasladaron 33 scripts de despliegues intermedios y herramientas forenses ad-hoc a `_archive/pre-cleanup-20260829/scripts/automation/` preservando rutas relativas. Se eliminó la caché compilada transitoria `__pycache__`.
-5. **Sincronización de Configuraciones:** Se actualizaron `config/systemd/magi-kiosk.service`, `config/systemd/seatd.service`, `config/labwc/environment` y `config/labwc/rc.xml` con los parámetros canónicos.
-6. **Ejecución y Certificación en Hardware:** Se ejecutó `scripts/verify-input-stack.sh` directamente en la Raspberry Pi 5.
+Esta sección documenta la subsanación atómica de los 7 puntos observados en la auditoría de la consolidación:
 
----
+### Fallo 1: Merge canónico a `main` y reubicación de `v1.0-stable`
+- Rama activa: `main`
+- Commit merge: `d88dd3f merge: consolidate v1.0-stable cleanup into main`
+- Output literal:
+```text
+$ git branch --show-current
+main
 
-## 3. Evidencias y Outputs Literales de Verificación
+$ git log -n 1 --oneline
+d88dd3f merge: consolidate v1.0-stable cleanup into main
 
-### Output Literal 1: Ejecución de `scripts/verify-input-stack.sh` en la Raspberry Pi 5
+$ git tag -l
+pre-cleanup-20260829
+v1.0-stable
+v6.1.0
+v8.0.0
+```
+
+### Fallo 2: Corrección y resolución dinámica por nombre en `scripts/verify-input-stack.sh`
+- Captura de verdad de terreno en `/proc/bus/input/devices`:
+  - `event0`: `QDtech MPI7003` (Pantalla táctil)
+  - `event1`: `HOLTEK USB Keyboard` (Teclado)
+  - `event7`: `vc4-hdmi-0 HDMI Jack` (Audio ALSA, excluido)
+- Output literal de la corrida del script corregido en hardware real:
 ```text
 ========================================================================
 >>> [1/5] VERIFICANDO SERVICIOS SYSTEMD ACTIVOS...
@@ -72,15 +65,25 @@
   [OK] magi-kiosk: ACTIVO
 
 ========================================================================
->>> [2/5] VERIFICANDO DISPOSITIVOS DE ENTRADA EN KERNEL...
+>>> [2/5] RESOLVIENDO DISPOSITIVOS DE ENTRADA REALES (KERNEL / PROC)...
 ========================================================================
-  [OK] Dispositivo /dev/input/event0 presente (Teclado/Mouse)
-  [OK] Dispositivo de entrada táctil: /dev/input/event7
+  [OK] Pantalla Táctil Detectada:
+       Nombre: "QDtech MPI7003"
+       Nodo:   /dev/input/event0
+       Estado: Dispositivo presente en filesystem (/dev/input/event0)
+  [OK] Teclado Físico Detectado:
+       Nombre: "HOLTEK USB Keyboard"
+       Nodo:   /dev/input/event1
+       Estado: Dispositivo presente en filesystem (/dev/input/event1)
+  [INFO] Dispositivos de audio/CEC excluidos de input humano:
+         - "pwr_button"
+         - "vc4-hdmi-0"
+         - "vc4-hdmi-0 HDMI Jack"
 
 ========================================================================
 >>> [3/5] VERIFICANDO VARIABLES DE ENTORNO EN MAGI-KIOSK...
 ========================================================================
-  [OK] PID de labwc: 20512
+  [OK] PID de labwc: 1090
   [STATUS] WLR_BACKENDS=drm,libinput
   [OK] libinput presente en WLR_BACKENDS de labwc
 
@@ -95,48 +98,75 @@
   [OK] Cero errores criticos de libinput en journal recent
 
 ========================================================================
->>> VERIFICACION COMPLETADA CON EXITO: STACK DE ENTRADA OPERATIVO
+>>> VERIFICACION COMPLETADA CON EXITO: STACK DE ENTRADA CERTIFICADO
 ========================================================================
 ```
 
-### Output Literal 2: Estado de Servicios `systemctl status seatd magi-ui magi-kiosk`
+### Fallo 3: Confirmación física del operador
+- En espera de registro literal de la respuesta del operador:
+  - Interacción táctil en BALTHASAR • 2
+  - Interacción táctil en NETWORK
+  - Entrada de texto por teclado USB físico
+
+### Fallo 4: Persistencia post-reinicio limpio
+- Se detectó que `magi-kiosk.service` estaba en estado `disabled` tras reinicio; se ejecutó `systemctl enable magi-kiosk.service` y se realizó un segundo reinicio limpio.
+- Output literal tras booteo en frío sin intervención manual:
 ```text
-● seatd.service - Seat management daemon
-     Loaded: loaded (/lib/systemd/system/seatd.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-08-29 16:52:27 CST; 7min ago
-   Main PID: 20494 (seatd)
-      Tasks: 1 (limit: 8874)
-     Memory: 228.0K (peak: 340.0K)
-        CPU: 13ms
-     CGroup: /system.slice/seatd.service
-             └─20494 /usr/bin/seatd -g video
+>>> systemctl is-active seatd magi-ui magi-kiosk
+active
+active
+active
 
-● magi-ui.service - MAGI System UI Server (Core 0 - Flask Backend)
-     Loaded: loaded (/etc/systemd/system/magi-ui.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-08-29 16:52:27 CST; 7min ago
-   Main PID: 20496 (python3)
-      Tasks: 5 (limit: 8874)
-     Memory: 29.5M (peak: 30.6M)
-        CPU: 1.157s
-     CGroup: /system.slice/magi-ui.service
-             └─20496 /usr/bin/python3 [HOME_REDACTED]
-
-● magi-kiosk.service - MAGI Wayland Kiosk Compositor (Core 1 - Interactive Labwc)
-     Loaded: loaded (/etc/systemd/system/magi-kiosk.service; enabled; preset: enabled)
-     Active: active (running) since Sat 2026-08-29 16:52:27 CST; 7min ago
-    Process: 20509 ExecStartPre=/bin/rm -rf /tmp/chromium_magi_profile/Singleton* (code=exited, status=0/SUCCESS)
-   Main PID: 20512 (labwc)
-      Tasks: 44 (limit: 8874)
-     Memory: 174.5M (peak: 205.8M)
-        CPU: 22.311s
-     CGroup: /system.slice/magi-kiosk.service
-             ├─20512 /usr/bin/labwc -s "/usr/bin/chromium-browser --no-sandbox --disable-setuid-sandbox --kiosk ..."
-             ├─20527 /usr/lib/chromium/chromium --no-sandbox --disable-setuid-sandbox --kiosk ...
-             ├─20531 /usr/lib/chromium/chromium-sandbox /usr/lib/chromium/chromium --type=zygote ...
+>>> Uptime:
+ 17:05:47 up 0 min,  2 users,  load average: 2.08, 0.50, 0.17
 ```
 
----
+### Fallo 5: Limpieza de `override.conf` en `seatd.service.d`
+- Output literal de verificación:
+```text
+=== Check seatd.service.d BEFORE ===
+ls: cannot access '/etc/systemd/system/seatd.service.d/': No such file or directory
 
-## 4. Estado de Git y Tags Canónicos
-- Tag de seguridad: `pre-cleanup-20260829`
-- Tag de versión consolidada: `v1.0-stable`
+=== Check override.conf BEFORE ===
+cat: /etc/systemd/system/seatd.service.d/override.conf: No such file or directory
+
+=== Check seatd.service.d AFTER ===
+ls: cannot access '/etc/systemd/system/seatd.service.d/': No such file or directory
+```
+
+### Fallo 6: Muestra verificable de 3 filas del `docs/cleanup-log.md`
+- Total de líneas en `docs/cleanup-log.md`: 192 líneas (175 archivos).
+- Muestras auditadas con grep de referencias:
+  1. **CANÓNICO:** `magi_server.py`
+     - Fila: `| Digital_Twin_Workspace/home_alonso/hil_workstation/05_hmi_display/magi_server.py | 2026-08-29 11:55 | Snapshot de introspección / sync_digital_twin | **CANÓNICO** | Conservar en Digital_Twin_Workspace/ |`
+     - Coincidencias en repo: `config/systemd/magi-ui.service`, `scripts/automation/deploy_magi_remote.py`, `scripts/automation/restart_kiosk.py`, `docs/repo-structure.md`, `README_MASTER.md`.
+  2. **DUPLICADO OBSOLETO:** `deploy_labwc_migration.py`
+     - Fila: `| scripts/automation/deploy_labwc_migration.py | 2026-08-29 15:59 | Ninguna (0 refs) | **DUPLICADO OBSOLETO** | Mover a _archive/pre-cleanup-20260829/scripts/automation/ |`
+     - Coincidencias en repo activo: 0 referencias.
+  3. **CÓDIGO ZOMBIE:** `env_loader.cpython-314.pyc`
+     - Fila: `| scripts/automation/__pycache__/env_loader.cpython-314.pyc | 2026-08-29 12:17 | Ninguna (0 refs) | **CÓDIGO ZOMBIE** | Eliminar (Artefacto compilado transitorio) |`
+     - Coincidencias en repo activo: 0 referencias.
+
+### Fallo 7: Comprobación de funcionalidad HTTP/HMI tras reorganización
+- Output literal tras `systemctl restart magi-ui magi-kiosk`:
+```text
+>>> systemctl is-active magi-ui magi-kiosk
+active
+active
+
+>>> curl -I http://127.0.0.1:8080
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.3 Python/3.13.5
+Date: Sat, 29 Aug 2026 23:05:55 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 23550
+Connection: close
+```
+- Journal de `magi-ui`:
+```text
+127.0.0.1 - - [29/Aug/2026 17:04:12] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [29/Aug/2026 17:04:12] "GET /static/js/keyboard.js HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 17:04:12] "GET /static/js/network.js HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 17:04:12] "GET /static/css/magi.css HTTP/1.1" 304 -
+127.0.0.1 - - [29/Aug/2026 17:04:13] "GET /api/status HTTP/1.1" 200 -
+```
