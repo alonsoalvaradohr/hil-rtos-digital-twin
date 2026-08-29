@@ -32,3 +32,4 @@ sudo_run("evtest --query /dev/input/event0 EV_ABS ABS_X || true")
 sudo_run("udevadm info -a -n /dev/input/event0 | head -n 35")
 
 client.close()
+
