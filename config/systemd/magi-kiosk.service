@@ -1,22 +1,26 @@
 [Unit]
-Description=MAGI Wayland Kiosk Compositor (Core 1)
+Description=MAGI Wayland Kiosk Compositor (Core 1 - Interactive Labwc)
 After=network.target systemd-user-sessions.service magi-ui.service seatd.service
 Wants=magi-ui.service seatd.service
-Conflicts=getty@tty1.service
 
 [Service]
 User=alonso
 Group=alonso
-PAMName=login
-Environment=XDG_RUNTIME_DIR=/run/user/1000
-Environment=WLR_LIBINPUT_NO_DEVICES=1
-Environment=LIBSEAT_BACKEND=seatd
-Environment=XDG_SESSION_TYPE=wayland
-TTYPath=/dev/tty1
-StandardInput=tty
+SupplementaryGroups=video input render tty dialout bluetooth
+StandardInput=null
 StandardOutput=journal
 StandardError=journal
-ExecStart=/usr/bin/cage -s -- /usr/bin/chromium --kiosk --noerrdialogs --disable-infobars --no-first-run --ozone-platform=wayland --enable-features=OverlayScrollbar --touch-events=enabled http://127.0.0.1:8080/
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=WLR_BACKENDS=drm,libinput
+Environment=WLR_RENDERER=gles2
+Environment=LIBSEAT_BACKEND=seatd
+Environment=SEATD_VTBOUND=0
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XCURSOR_SIZE=24
+Environment=XCURSOR_THEME=Adwaita
+ExecStartPre=/bin/rm -rf /tmp/chromium_magi_profile/Singleton*
+ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --no-sandbox --disable-setuid-sandbox --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --disable-extensions --disable-background-networking --disable-sync --disable-translate --metrics-recording-only --no-service-autorun --remote-debugging-port=9222 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --user-data-dir=/tmp/chromium_magi_profile http://127.0.0.1:8080/"
 Restart=always
 RestartSec=2s
 CPUAffinity=1

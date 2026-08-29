@@ -1,0 +1,514 @@
+=== BASH HISTORY ===
+sudo apt update && sudo apt install git bc bison flex libssl-dev make libncurses5-dev raspberrypi-kernel-headers libelf-dev -y
+sudo apt update
+sudo apt install git bc bison flex libssl-dev make libncurses-dev libelf-dev build-essential kmod dpkg-dev -y
+mkdir ~/repositorio-kernel && cd ~/repositorio-kernel
+git clone --depth 1 --branch rpi-6.6.y-rt https://github.com/raspberrypi/linux
+cd linux
+cd .
+cd/
+cd ./
+cd ..
+sudo apt update && sudo apt install tree -y
+tree
+tree -a
+git clone --depth 1 --branch rpi-6.6.y-rt https://github.com/raspberrypi/linux
+cd ~/repositorio-kernel
+git clone --depth 1 --branch rpi-6.6.y https://github.com/raspberrypi/linux
+cd linux
+make bcm2712_defconfig
+make menuconfig
+git ls-remote --heads https://github.com/raspberrypi/linux | grep "\-rt"
+cd ~/repositorio-kernel
+rm -rf linux
+cd ~/repositorio-kernel
+git clone --depth 1 --branch rpi-6.6.y-rt-patched https://github.com/lemariva/RT-Linux-RPi.git linux
+cd linux
+make bcm2712_defconfig
+make menuconfig
+mkdir -p ~/hil_workstation/{00_kernel_build,01_system_tuning/{boot_config,irq_affinity,services},02_hardware_io/{dt_overlays,spi_dma,gpio_fast},03_hil_plant_model/solvers,04_ipc_shared_memory/{posix_shm,lock_free_queues},05_hmi_display/assets}
+cd ~/hil_workstation/00_kernel_build
+git clone --depth 1 --branch rpi-6.6.y https://github.com/raspberrypi/linux
+cd linux
+# 1. Identificar la versión exacta del Kernel de Raspberry Pi
+KVER=$(make kernelversion)
+echo "Tu versión de kernel base es: $KVER"
+# 2. Buscar el parche oficial en los servidores de kernel.org
+RT_URL="https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/6.6/"
+RT_FILE=$(curl -s $RT_URL | grep -o 'patch-'"$KVER"'-rt[0-9]*\.patch\.xz' | tail -1)
+# 3. Validación y aplicación segura
+if [ -z "$RT_FILE" ]; then     echo "ALERTA CRÍTICA: No se encontró un parche RT exacto para la versión $KVER en kernel.org."; else     echo "Parche encontrado: $RT_FILE. Iniciando descarga segura...";     wget "${RT_URL}${RT_FILE}";     echo "Aplicando parche de Tiempo Real al árbol de código...";     xzcat $RT_FILE | patch -p1; fi
+curl -s https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/6.6/ | grep -o 'patch-6\.6\.[0-9]\+-rt[0-9]\+\.patch\.xz' | sort -V | tail -5
+curl -s https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/6.6/ | grep -Eo 'patch-6\.6\.[0-9]+-rt[0-9]+\.patch\.xz' | sort -V | tail -n 5
+curl -sL https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/6.6/ | grep -Eo 'patch-6\.6\.[0-9]+-rt[0-9]+\.patch\.xz' | sort -V | tail -n 5
+cd ~/hil_workstation/00_kernel_build/linux && rm -f .git/index.lock && git fsck
+wget -qO- https://cdn.kernel.org/pub/linux/kernel/projects/rt/6.6/sha256sums.asc | awk '{print $2}' | grep "\.patch\.xz" | sort -V | tail -n 1
+apt-cache search linux-image | grep "\-rt"
+sudo apt install linux-image-rpi-v8-rt linux-headers-rpi-v8-rt -y
+sudo cp /boot/firmware/config.txt ~/hil_workstation/01_system_tuning/boot_config/config_original.bak && sudo sh -c 'printf "\n[all]\nkernel=kernel8_rt.img\ninitramfs initramfs8_rt followkernel\n" >> /boot/firmware/config.txt' && tail -n 4 /boot/firmware/config.txt
+sudo reboot
+uname -v
+sudo apt install cpufrequtils -y && sudo sh -c 'echo "GOVERNOR=\"performance\"" > /etc/default/cpufrequtils' && sudo systemctl restart cpufrequtils && cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+sudo bash -c 'cat << "EOF" > /etc/systemd/system/rt-cpu-governor.service
+[Unit]
+Description=Fijar Gobernador CPU a Performance para RTOS
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $f; done"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF' && sudo systemctl daemon-reload && sudo systemctl enable --now rt-cpu-governor.service && cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+sudo sed -i -e 's/ isolcpus=[^ ]*//g' -e 's/ nohz_full=[^ ]*//g' -e 's/ rcu_nocbs=[^ ]*//g' /boot/firmware/cmdline.txt && sudo sed -i '1 s/$/ isolcpus=2,3 nohz_full=2,3 rcu_nocbs=2,3/' /boot/firmware/cmdline.txt && cat /boot/firmware/cmdline.txt
+sudo bash -c 'cat << "EOF" > /etc/systemd/system/rt-irq-affinity.service
+[Unit]
+Description=Enrutar IRQs a Cores 0 y 1 para aislar entorno HIL
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "echo 3 > /proc/irq/default_smp_affinity; for d in /proc/irq/[0-9]*; do echo 3 > $d/smp_affinity 2>/dev/null; done; exit 0"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF' && sudo systemctl daemon-reload && sudo systemctl enable rt-irq-affinity.service && echo "[+] Aislamiento IRQ configurado y persistente."
+sudo reboot
+cat /sys/devices/system/cpu/isolated
+sudo apt install rt-tests -y && cyclictest --version
+sudo cyclictest -m -p 99 -a 2,3 -t 2 -i 1000 -D 1m -q
+sudo bash -c 'cat << "EOF" > /etc/security/limits.d/99-realtime.conf
+@alonso - rtprio 99
+@alonso - memlock unlimited
+EOF' && sudo groupadd -f realtime && sudo usermod -aG realtime alonso && echo "[+] Privilegios de Tiempo Real otorgados al usuario."
+su - alonso -c "echo -n 'Max RT Priority: ' && ulimit -r && echo -n 'Max Locked Memory: ' && ulimit -l && df -hT /dev/shm"
+mkdir -p ~/hil_workstation/02_ipc_core && cat << "EOF" > ~/hil_workstation/02_ipc_core/LockFreeQueue.hpp
+#ifndef LOCK_FREE_QUEUE_HPP
+#define LOCK_FREE_QUEUE_HPP
+
+#include <atomic>
+#include <cstdint>
+
+// Patrón SPSC Lock-Free para IPC en Tiempo Real
+template <typename T, size_t Size>
+class LockFreeQueue {
+private:
+    T buffer[Size];
+    std::atomic<size_t> head{0};
+    std::atomic<size_t> tail{0};
+
+public:
+    // Llamado por el Productor (Ej. Lazo HIL)
+    bool push(const T& item) {
+        size_t current_tail = tail.load(std::memory_order_relaxed);
+        size_t next_tail = (current_tail + 1) % Size;
+        if (next_tail == head.load(std::memory_order_acquire)) {
+            return false; // Buffer lleno (Evita bloqueo)
+        }
+        buffer[current_tail] = item;
+        tail.store(next_tail, std::memory_order_release);
+        return true;
+    }
+
+    // Llamado por el Consumidor (Ej. Hilo MQTT/GUI)
+    bool pop(T& item) {
+        size_t current_head = head.load(std::memory_order_relaxed);
+        if (current_head == tail.load(std::memory_order_acquire)) {
+            return false; // Buffer vacío (Evita bloqueo)
+        }
+        item = buffer[current_head];
+        head.store((current_head + 1) % Size, std::memory_order_release);
+        return true;
+    }
+};
+
+#endif // LOCK_FREE_QUEUE_HPP
+EOF
+
+echo "[+] Plantilla C++ Lock-Free SPSC generada en ~/hil_workstation/02_ipc_core/LockFreeQueue.hpp"
+sudo apt install mosquitto mosquitto-clients -y && sudo systemctl enable --now mosquitto && systemctl is-active mosquitto
+bash <(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
+sudo systemctl enable --now nodered.service && systemctl is-active nodered
+cd ~/.node-red && npm install @node-red-contrib-themes/theme-collection @flowfuse/node-red-dashboard && sudo systemctl restart nodered && echo "[+] Nodos HMI y Tema Oscuro instalados. Servicio reiniciado."
+sudo apt install chromium-browser x1ight- xdotool unclutter -y && echo "[+] Herramientas de visualización HMI instaladas con éxito."
+sudo apt install chromium-browser -y
+mkdir -p ~/.config/autostart && cat << "EOF" > ~/.config/autostart/hmi-kiosk.desktop
+[Desktop Entry]
+Type=Application
+Name=HMI Kiosk
+Exec=chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --ozone-platform=wayland http://127.0.0.1:1880/dashboard
+X-GNOME-Autostart-enabled=true
+EOF
+
+echo "[+] Regla de arranque en Modo Kiosko HMI inyectada exitosamente."
+sudo apt install libmosquitto-dev build-essential cmake -y && cat << "EOF" > ~/hil_workstation/02_ipc_core/SharedState.hpp
+#ifndef SHARED_STATE_HPP
+#define SHARED_STATE_HPP
+
+#include "LockFreeQueue.hpp"
+
+// Estructura universal para comandos (Web -> Cores 2/3)
+struct HILCommand {
+    uint32_t action_id;
+    float payload;
+};
+
+// Estructura universal para telemetría (Cores 2/3 -> Web)
+struct HILTelemetry {
+    uint32_t sensor_id;
+    float value;
+};
+
+// Mapa exacto de la Memoria Compartida (/dev/shm)
+struct HILSharedMemory {
+    LockFreeQueue<HILCommand, 256> web_to_hardware;
+    LockFreeQueue<HILTelemetry, 256> hardware_to_web;
+};
+
+#endif // SHARED_STATE_HPP
+EOF
+
+echo "[+] Dependencias de compilación instaladas y Estructura de Memoria Compartida generada."
+cat << "EOF" > ~/hil_workstation/02_ipc_core/ipc_daemon.cpp
+#include <iostream>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <mosquitto.h>
+#include <cstring>
+#include "SharedState.hpp"
+
+HILSharedMemory* shm_ptr = nullptr;
+
+// Callback: Se ejecuta cuando llega un mensaje desde la Interfaz Web (Node-RED)
+void on_message(struct mosquitto *mosq, void *userdata, const struct mosquitto_message *message) {
+    if(shm_ptr) {
+        HILCommand cmd;
+        cmd.action_id = 1; // ID de prueba
+        cmd.payload = 1.0f; // En el futuro aquí parsearemos el JSON real
+        
+        // Empujar a la cola atómica (Cores 2/3 leerán esto sin bloqueos)
+        shm_ptr->web_to_hardware.push(cmd);
+    }
+}
+
+int main() {
+    // 1. Crear y mapear Memoria Compartida pura en RAM (tmpfs)
+    int shm_fd = shm_open("/hil_shm", O_CREAT | O_RDWR, 0666);
+    ftruncate(shm_fd, sizeof(HILSharedMemory));
+    shm_ptr = (HILSharedMemory*)mmap(0, sizeof(HILSharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+
+    // Inicializar la estructura de colas Atómicas en memoria
+    new (shm_ptr) HILSharedMemory();
+
+    // 2. Conectar al cerebro IoT (Mosquitto MQTT)
+    mosquitto_lib_init();
+    struct mosquitto *mosq = mosquitto_new("HIL_IPC_Bridge", true, NULL);
+    mosquitto_message_callback_set(mosq, on_message);
+    
+    if(mosquitto_connect(mosq, "localhost", 1883, 60) != MOSQ_ERR_SUCCESS) {
+        std::cerr << "Error crítico: No se pudo conectar a MQTT" << std::endl;
+        return 1;
+    }
+    
+    // Suscribirse al tema de comandos
+    mosquitto_subscribe(mosq, NULL, "hil/command", 0);
+    std::cout << "[+] Puente IPC compilado e iniciado. Traductor MQTT <-> SHM activo." << std::endl;
+    
+    // Mantener el demonio vivo (Delegado al sistema operativo en Cores 0/1)
+    mosquitto_loop_forever(mosq, -1, 1);
+    
+    mosquitto_destroy(mosq);
+    mosquitto_lib_cleanup();
+    return 0;
+}
+EOF
+
+g++ -O3 -Wall ~/hil_workstation/02_ipc_core/ipc_daemon.cpp -o ~/hil_workstation/02_ipc_core/ipc_daemon -lmosquitto -lrt && echo "[+] Compilación exitosa: Binario 'ipc_daemon' generado."
+cat << "EOF" > ~/hil_workstation/02_ipc_core/rt_motor.cpp
+#include <iostream>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <sched.h>
+#include "SharedState.hpp"
+
+int main() {
+    // 1. Bloquear memoria en RAM (Prevenir latencia de Page Faults)
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+        std::cerr << "Error: No se pudo bloquear la memoria en RAM." << std::endl;
+        return 1;
+    }
+
+    // 2. Afinidad de CPU: Anclar al silicio aislado (Cores 2 y 3)
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(2, &cpuset);
+    CPU_SET(3, &cpuset);
+    if (sched_setaffinity(0, sizeof(cpu_set_t), &cpuset) == -1) {
+        std::cerr << "Error: No se pudo anclar a los Cores 2/3." << std::endl;
+        return 1;
+    }
+
+    // 3. Política de Tiempo Real: Prioridad Máxima (99)
+    struct sched_param param;
+    param.sched_priority = 99;
+    if (sched_setscheduler(0, SCHED_FIFO, &param) == -1) {
+        std::cerr << "Error: No se pudo establecer la prioridad RT 99." << std::endl;
+        return 1;
+    }
+
+    // 4. Conectar a la Memoria Compartida (tmpfs / RAM)
+    int shm_fd = shm_open("/hil_shm", O_RDWR, 0666);
+    if (shm_fd == -1) {
+        std::cerr << "Error: No se encontró la memoria compartida. Ejecuta el Demonio IPC primero." << std::endl;
+        return 1;
+    }
+    HILSharedMemory* shm_ptr = (HILSharedMemory*)mmap(0, sizeof(HILSharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+
+    std::cout << "[+] Lazo HIL iniciado en Cores aislados (Prioridad FIFO 99)." << std::endl;
+
+    // 5. Lazo de Control Determinista (1 kHz)
+    HILCommand cmd;
+    while (true) {
+        // Leer de la cola Lock-Free (Operación atómica de latencia ultrabaja)
+        if (shm_ptr->web_to_hardware.pop(cmd)) {
+            std::cout << "[Cores 2/3] Señal IoT recibida! ID: " << cmd.action_id << std::endl;
+            // Aquí en el futuro interactuaremos con el GPIO / SPI / I2C
+        }
+        
+        // Simular el ciclo de muestreo de 1 milisegundo (Ts = 1ms)
+        usleep(1000); 
+    }
+
+    return 0;
+}
+EOF
+
+g++ -O3 -Wall ~/hil_workstation/02_ipc_core/rt_motor.cpp -o ~/hil_workstation/02_ipc_core/rt_motor -lrt && echo "[+] Compilación exitosa: Binario 'rt_motor' (Tiempo Real) generado."
+sudo bash -c 'cat << "EOF" > /etc/systemd/system/hil-ipc.service
+[Unit]
+Description=HIL IPC Traductor (MQTT a RAM)
+After=mosquitto.service
+Requires=mosquitto.service
+
+[Service]
+Type=simple
+User=alonso
+ExecStart=/home/alonso/hil_workstation/02_ipc_core/ipc_daemon
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF' && sudo bash -c 'cat << "EOF" > /etc/systemd/system/hil-rt.service
+[Unit]
+Description=HIL Motor de Tiempo Real (Cores 2 y 3)
+After=hil-ipc.service
+Requires=hil-ipc.service
+
+[Service]
+Type=simple
+User=alonso
+LimitMEMLOCK=infinity
+LimitRTPRIO=99
+ExecStart=/home/alonso/hil_workstation/02_ipc_core/rt_motor
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF' && sudo systemctl daemon-reload && sudo systemctl enable --now hil-ipc.service hil-rt.service && echo "[+] Orquestación finalizada. Sistema Nervioso HIL autónomo y en línea."
+journalctl -u hil-rt.service -f
+sudo shutdown  now
+sudo shut down now
+shutdown no
+shutdown now
+
+=== GIT BRANCHES & STATUS IN WORKSTATION ===
+
+
+=== ACTIVE PROCESSES ===
+6788   0 root     seatd           /usr/sbin/seatd -g video -l debug
+   6790   1 alonso   python3         /usr/bin/python3 /home/alonso/hil_workstation/05_hmi_display/magi_server.py
+   6794   1 alonso   labwc           /usr/bin/labwc -s /usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/
+   6802   1 alonso   chromium        /usr/lib/chromium/chromium --force-renderer-accessibility --enable-remote-extensions --show-component-extension-options --enable-gpu-rasterization --no-default-browser-check --disable-pings --media-router=0 --enable-remote-extensions --load-extension= --use-angle=gles http://127.0.0.1:8080/ --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0
+   6838   1 alonso   chrome_crashpad /usr/lib/chromium/chrome_crashpad_handler --monitor-self --monitor-self-annotation=ptype=crashpad-handler --database=/home/alonso/.config/chromium/Crash Reports --annotation=channel=built on Debian GNU/Linux 13 (trixie) --annotation=lsb-release=Debian GNU/Linux 13 (trixie) --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=149.0.7827.196 --initial-client-fd=5 --shared-client-connection
+   6840   1 alonso   chrome_crashpad /usr/lib/chromium/chrome_crashpad_handler --no-periodic-tasks --monitor-self-annotation=ptype=crashpad-handler --database=/home/alonso/.config/chromium/Crash Reports --annotation=channel=built on Debian GNU/Linux 13 (trixie) --annotation=lsb-release=Debian GNU/Linux 13 (trixie) --annotation=plat=Linux --annotation=prod=Chrome_Linux --annotation=ver=149.0.7827.196 --initial-client-fd=4 --shared-client-connection
+   6852   1 alonso   chromium        /usr/lib/chromium/chromium --type=zygote --no-zygote-sandbox --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --change-stack-guard-on-fork=enable
+   6853   1 alonso   chromium        /usr/lib/chromium/chromium --type=zygote --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --change-stack-guard-on-fork=enable
+   6858   1 alonso   chromium        /usr/lib/chromium/chromium --type=zygote --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --change-stack-guard-on-fork=enable
+   6890   1 alonso   chromium        /usr/lib/chromium/chromium --type=gpu-process --enable-gpu-rasterization --ozone-platform=wayland --render-node-override=/dev/dri/card1 --use-angle=gles --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --change-stack-guard-on-fork=enable --gpu-preferences=UAAAAAAAAAAgAQAAAAAAAAAAAAAAAGAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAA --shared-files --metrics-shmem-handle=4,i,13061099633971934141,16015222250671611209,262144 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708988185955192
+   6892   1 alonso   chromium        /usr/lib/chromium/chromium --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-GB --service-sandbox-type=none --use-angle=gles --render-node-override=/dev/dri/card1 --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,8242157979698729077,11909586651189036732,524288 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708989122997041
+   6898   1 alonso   chromium        /usr/lib/chromium/chromium --type=utility --utility-sub-type=storage.mojom.StorageService --lang=en-GB --service-sandbox-type=utility --use-angle=gles --render-node-override=/dev/dri/card1 --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --change-stack-guard-on-fork=enable --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,721093772194359460,624592801200122840,524288 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708990060038890
+   6930   1 alonso   chromium        /usr/lib/chromium/chromium --type=renderer --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --change-stack-guard-on-fork=enable --remote-debugging-port=9222 --touch-events=enabled --use-fake-ui-for-media-stream --ozone-platform=wayland --lang=en-GB --num-raster-threads=1 --renderer-client-id=6 --time-ticks-at-unix-epoch=-1788039382098491 --launch-time-ticks=1044467445 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,13234428717538294095,17229613228423067434,2097152 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708991934122588
+   6931   1 alonso   chromium        /usr/lib/chromium/chromium --type=renderer --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --change-stack-guard-on-fork=enable --remote-debugging-port=9222 --touch-events=enabled --use-fake-ui-for-media-stream --ozone-platform=wayland --lang=en-GB --num-raster-threads=1 --renderer-client-id=5 --time-ticks-at-unix-epoch=-1788039382098491 --launch-time-ticks=1044480310 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,17704661564681220089,17958241591179122905,2097152 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708990997080739
+   6949   1 alonso   chromium        /usr/lib/chromium/chromium --type=renderer --crashpad-handler-pid=0 --enable-crash-reporter=,built on Debian GNU/Linux 13 (trixie) --noerrdialogs --user-data-dir=/tmp/chromium_magi_profile --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --change-stack-guard-on-fork=enable --remote-debugging-port=9222 --touch-events=enabled --use-fake-ui-for-media-stream --ozone-platform=wayland --lang=en-GB --num-raster-threads=1 --renderer-client-id=7 --time-ticks-at-unix-epoch=-1788039382098491 --launch-time-ticks=1044676388 --shared-files=v8_context_snapshot_data:100 --metrics-shmem-handle=4,i,1307504874496379721,2562505057637540815,2097152 --field-trial-handle=3,i,7814344430375198440,6273999071306058041,262144 --enable-features=TouchTextSelection,UseOzonePlatform,WaylandWindowDecorations --disable-features=EyeDropper,OptimizationHints,Translate --variations-seed-version --pseudonymization-salt-handle=7,i,5401601588715319365,5959746577615918058,4 --trace-process-track-uuid=3190708992871164437
+
+=== LABWC PROCESS ENVIRONMENT ===
+LANG=en_GB.UTF-8
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+USER=alonso
+LOGNAME=alonso
+HOME=/home/alonso
+SHELL=/bin/bash
+INVOCATION_ID=0a9e5ac6e60a43099ffb3bf60bf1997f
+JOURNAL_STREAM=9:28576
+SYSTEMD_EXEC_PID=6794
+XDG_RUNTIME_DIR=/run/user/1000
+WAYLAND_DISPLAY=wayland-0
+WLR_BACKENDS=drm
+WLR_RENDERER=gles2
+LIBSEAT_BACKEND=seatd
+SEATD_VTBOUND=0
+XDG_SESSION_TYPE=wayland
+XCURSOR_SIZE=24
+XCURSOR_THEME=Adwaita
+
+=== CHROMIUM PROCESS ENVIRONMENT ===
+USER=alonso
+WLR_BACKENDS=drm
+XDG_SESSION_TYPE=wayland
+XCURSOR_SIZE=24
+HOME=/home/alonso
+CHROME_DESKTOP=chromium.desktop
+GOOGLE_DEFAULT_CLIENT_ID=811574891467.apps.googleusercontent.com
+GOOGLE_DEFAULT_CLIENT_SECRET=kdloedMFGdGla2P1zacGjAQh
+SYSTEMD_EXEC_PID=6794
+CHROME_WRAPPER=/usr/bin/chromium
+WAYLAND_DISPLAY=wayland-0
+LIBSEAT_BACKEND=seatd
+LOGNAME=alonso
+JOURNAL_STREAM=9:28576
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+INVOCATION_ID=0a9e5ac6e60a43099ffb3bf60bf1997f
+LABWC_PID=6794
+XDG_RUNTIME_DIR=/run/user/1000
+XCURSOR_THEME=Adwaita
+DISPLAY=:0
+LANG=en_GB.UTF-8
+XDG_CURRENT_DESKTOP=labwc:wlroots
+SHELL=/bin/bash
+_JAVA_AWT_WM_NONREPARENTING=1
+WLR_RENDERER=gles2
+PWD=/
+CHROME_VERSION_EXTRA=built on Debian GNU/Linux 13 (trixie)
+SEATD_VTBOUND=0
+LABWC_VER=0.9.8
+CHROMIUM_FLAGS= --force-renderer-accessibility --enable-remote-extensions --show-component-extension-options --enable-gpu-rasterization --no-default-browser-check --disable-pings --media-router=0 --enable-remote-extensions --load-extension= --use-angle=gles
+GOOGLE_API_KEY=AIzaSyCkfPOPZXDKNn8hhgu3JrA62wIgC93d44k
+
+=== SOCKETS IN RUN USER 1000 ===
+srwxrwx---  1 root   video    0 Aug 29 15:53 /run/seatd.sock
+
+/run/user/1000/:
+total 0
+drwxrwx---+ 6 alonso alonso 260 Aug 29 15:53 .
+drwxr-xr-x  3 root   root    60 Aug 29 15:37 ..
+srw-rw-rw-  1 alonso alonso   0 Aug 29 15:37 bus
+drwx------  3 alonso alonso  60 Aug 29 15:37 dbus-1
+drwx------  2 alonso alonso  60 Aug 29 15:37 dconf
+drwx------  2 alonso alonso 160 Aug 29 15:37 gnupg
+srw-------  1 alonso alonso   0 Aug 29 15:37 openssh_agent
+drwxr-xr-x  6 alonso alonso 160 Aug 29 15:37 systemd
+srwxrwxr-x  1 alonso alonso   0 Aug 29 15:38 vscode-ipc-17237eaa-6666-4ec5-9f01-0ceb7a6521fa.sock
+srwxrwxr-x  1 alonso alonso   0 Aug 29 15:39 vscode-ipc-4118cb5f-20d7-4ed9-a726-aeee6a7e4dfa.sock
+srwxrwxr-x  1 alonso alonso   0 Aug 29 15:38 vscode-ipc-adc48935-f3e2-41ef-ab13-d3b341a2df5b.sock
+srwxrwxr-x+ 1 alonso alonso   0 Aug 29 15:53 wayland-0
+-rw-r-----  1 alonso alonso   0 Aug 29 15:53 wayland-0.lock
+
+=== UDEV RULES IN /etc/udev/rules.d ===
+# MAGI SYSTEM - HIL Touchscreen & Input Devices for Seat0
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="mouse*", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
+ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
+
+# udev rules for RPi Keyboards
+
+# RPi 500 Keyboard
+KERNEL=="hidraw*", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0010", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl"
+
+# RPi 500+ Keyboard  
+KERNEL=="hidraw*", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0011", MODE="0660", GROUP="plugdev", TAG+="uaccess", TAG+="udev-acl"
+
+=== SEATD SYSTEMD CONFIG ===
+# /usr/lib/systemd/system/seatd.service
+[Unit]
+Description=Seat management daemon
+
+[Service]
+Type=simple
+ExecStart=seatd -g video
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/seatd.service.d/override.conf
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/seatd -g video -l debug
+Environment=SEATD_VTBOUND=0
+
+=== MAGI-KIOSK SYSTEMD CONFIG ===
+# /etc/systemd/system/magi-kiosk.service
+[Unit]
+Description=MAGI Wayland Kiosk Compositor (Core 1 - Interactive Labwc)
+After=network.target systemd-user-sessions.service magi-ui.service seatd.service
+Wants=magi-ui.service seatd.service
+
+[Service]
+User=alonso
+Group=alonso
+SupplementaryGroups=video input render tty dialout bluetooth
+StandardInput=null
+StandardOutput=journal
+StandardError=journal
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=WLR_BACKENDS=drm
+Environment=WLR_RENDERER=gles2
+Environment=LIBSEAT_BACKEND=seatd
+Environment=SEATD_VTBOUND=0
+Environment=XDG_SESSION_TYPE=wayland
+Environment=XCURSOR_SIZE=24
+Environment=XCURSOR_THEME=Adwaita
+ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/"
+Restart=always
+RestartSec=2s
+CPUAffinity=1
+
+[Install]
+WantedBy=graphical.target
+
+=== MAGI-UI SYSTEMD CONFIG ===
+# /etc/systemd/system/magi-ui.service
+﻿[Unit]
+Description=MAGI SYSTEM HMI Backend & Touch Network Manager (Core 1)
+Documentation=file:///E:/alons/Documents/Raspberry%20HIL/docs/ARCHITECTURE.md
+After=network.target syslog.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+WorkingDirectory=/home/alonso/hil_workstation/05_hmi_display
+ExecStart=/usr/bin/python3 /home/alonso/hil_workstation/05_hmi_display/magi_server.py
+Restart=always
+RestartSec=1s
+
+# Aislamiento Estricto en Core 1 (Dominio Gráfico y UI)
+CPUAffinity=1
+CPUQuota=80%
+LimitNOFILE=65536
+
+# Permisos y Protección
+UMask=0022
+KillMode=process
+TimeoutStopSec=3s
+
+[Install]
+WantedBy=multi-user.target
+

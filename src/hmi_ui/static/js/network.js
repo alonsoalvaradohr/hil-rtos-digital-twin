@@ -1,6 +1,6 @@
-﻿/**
+/**
  * MAGI SYSTEM - TOUCH NETWORK & BLUETOOTH MANAGER
- * Touch-optimized Network Interface (Wi-Fi via nmcli, Bluetooth via BlueZ)
+ * Sanitized for Chromium Kiosk (Zero Unicode Tofu, NERV Style)
  */
 
 class MagiNetwork {
@@ -13,40 +13,45 @@ class MagiNetwork {
     }
 
     init() {
+        const bindTap = (el, handler) => {
+            if (!el) return;
+            let touchHandled = false;
+            el.addEventListener("pointerdown", () => {
+                el.style.opacity = "0.75";
+            });
+            el.addEventListener("pointerup", (e) => {
+                el.style.opacity = "";
+                touchHandled = true;
+                setTimeout(() => { touchHandled = false; }, 400);
+                handler(e);
+            });
+            el.addEventListener("click", (e) => {
+                el.style.opacity = "";
+                if (touchHandled) return;
+                handler(e);
+            });
+        };
+
         const btnNet = document.getElementById("btn-open-network");
-        if (btnNet) {
-            btnNet.addEventListener("click", () => this.open());
-        }
+        bindTap(btnNet, () => this.open());
 
         const btnClose = document.getElementById("btn-close-network");
-        if (btnClose) {
-            btnClose.addEventListener("click", () => this.close());
-        }
+        bindTap(btnClose, () => this.close());
 
         const tabWifi = document.getElementById("tab-btn-wifi");
         const tabBt = document.getElementById("tab-btn-bt");
 
-        if (tabWifi) {
-            tabWifi.addEventListener("click", () => this.switchTab("wifi"));
-        }
-        if (tabBt) {
-            tabBt.addEventListener("click", () => this.switchTab("bluetooth"));
-        }
+        bindTap(tabWifi, () => this.switchTab("wifi"));
+        bindTap(tabBt, () => this.switchTab("bluetooth"));
 
         const btnScanWifi = document.getElementById("btn-rescan-wifi");
-        if (btnScanWifi) {
-            btnScanWifi.addEventListener("click", () => this.scanWifi());
-        }
+        bindTap(btnScanWifi, () => this.scanWifi());
 
         const btnConfirmConn = document.getElementById("btn-confirm-connect");
-        if (btnConfirmConn) {
-            btnConfirmConn.addEventListener("click", () => this.submitConnection());
-        }
+        bindTap(btnConfirmConn, () => this.submitConnection());
 
         const btnCancelConn = document.getElementById("btn-cancel-connect");
-        if (btnCancelConn) {
-            btnCancelConn.addEventListener("click", () => this.cancelConnectionPrompt());
-        }
+        bindTap(btnCancelConn, () => this.cancelConnectionPrompt());
     }
 
     open() {
@@ -93,7 +98,7 @@ class MagiNetwork {
             const data = await res.json();
 
             if (!data.success || !data.networks || data.networks.length === 0) {
-                this.wifiListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No se detectaron redes inalámbricas.</div>";
+                this.wifiListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No se detectaron redes inalambricas en el area.</div>";
                 return;
             }
 
@@ -102,20 +107,39 @@ class MagiNetwork {
                 const item = document.createElement("div");
                 item.className = "wifi-item";
 
-                const signalBars = (net.signal >= 75) ? "▂▄▆█" : (net.signal >= 50) ? "▂▄▆_" : (net.signal >= 25) ? "▂▄__" : "▂___";
+                const signalLevel = (net.signal >= 75) ? 4 : (net.signal >= 50) ? 3 : (net.signal >= 25) ? 2 : 1;
+                const signalBarsHtml = `
+                    <div class="signal-meter">
+                        <span class="signal-bar bar-1 ${signalLevel >= 1 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-2 ${signalLevel >= 2 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-3 ${signalLevel >= 3 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-4 ${signalLevel >= 4 ? 'active' : ''}"></span>
+                    </div>
+                `;
 
                 item.innerHTML = `
                     <div>
                         <div class="wifi-name">${this.escapeHtml(net.ssid)}</div>
-                        <div class="wifi-sec">${net.security} • Ch ${net.channel} • ${net.rate}</div>
+                        <div class="wifi-sec">${net.security} // Ch ${net.channel} // ${net.rate}</div>
                     </div>
-                    <div style="text-align: right;">
-                        <div class="wifi-signal">${signalBars} ${net.signal}%</div>
-                        <button class="eva-btn-action" style="padding: 4px 10px; font-size: 11px; margin-top: 4px;">CONECTAR</button>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                        <div class="signal-wrapper">
+                            ${signalBarsHtml}
+                            <span class="wifi-signal-text">${net.signal}%</span>
+                        </div>
+                        <button class="eva-btn-action" style="padding: 6px 12px; font-size: 11px;">CONECTAR</button>
                     </div>
                 `;
 
-                item.addEventListener("click", () => this.promptConnect(net.ssid, net.security !== "Open"));
+                let lastItemTap = 0;
+                const onConnectClick = (e) => {
+                    const now = Date.now();
+                    if (now - lastItemTap < 250) return;
+                    lastItemTap = now;
+                    this.promptConnect(net.ssid, net.security !== "Open");
+                };
+                item.addEventListener("pointerup", onConnectClick);
+                item.addEventListener("click", onConnectClick);
                 this.wifiListContainer.appendChild(item);
             });
         } catch (e) {
@@ -171,7 +195,7 @@ class MagiNetwork {
             if (data.success) {
                 if (statusMsg) {
                     statusMsg.style.color = "var(--magi-green)";
-                    statusMsg.innerText = "[✓] CONECTADO EXITOSAMENTE A " + this.selectedSSID;
+                    statusMsg.innerText = "[OK] CONECTADO EXITOSAMENTE A " + this.selectedSSID;
                 }
                 setTimeout(() => {
                     this.cancelConnectionPrompt();
@@ -181,13 +205,13 @@ class MagiNetwork {
             } else {
                 if (statusMsg) {
                     statusMsg.style.color = "var(--magi-red)";
-                    statusMsg.innerText = "[-] FALLO: " + data.message;
+                    statusMsg.innerText = "[-] ERROR: " + data.message;
                 }
             }
         } catch (e) {
             if (statusMsg) {
                 statusMsg.style.color = "var(--magi-red)";
-                statusMsg.innerText = "[-] ERROR DE RED: " + e.message;
+                statusMsg.innerText = "[-] ERROR DE ENLACE: " + e.message;
             }
         }
     }
@@ -212,9 +236,9 @@ class MagiNetwork {
                 item.innerHTML = `
                     <div>
                         <div class="wifi-name">${this.escapeHtml(dev.name)}</div>
-                        <div class="wifi-sec">${dev.mac} • ${dev.paired ? "VINCULADO" : "DISPONIBLE"}</div>
+                        <div class="wifi-sec">${dev.mac} // ${dev.paired ? "VINCULADO" : "DISPONIBLE"}</div>
                     </div>
-                    <button class="eva-btn-action" style="padding: 4px 10px; font-size: 11px;">CONECTAR</button>
+                    <button class="eva-btn-action" style="padding: 6px 12px; font-size: 11px;">CONECTAR</button>
                 `;
                 this.btListContainer.appendChild(item);
             });

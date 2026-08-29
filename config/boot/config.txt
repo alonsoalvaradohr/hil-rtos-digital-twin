@@ -2,29 +2,24 @@
 # http://rptl.io/configtxt
 # Some settings may impact device functionality. See link above for details
 
-# Uncomment some or all of these to enable the optional hardware interfaces
-#dtparam=i2c_arm=on
-#dtparam=i2s=on
-#dtparam=spi=on
-
-# Enable audio (loads snd_bcm2835)
+# Enable audio
 dtparam=audio=on
-
-# Additional overlays and parameters are documented
-# /boot/firmware/overlays/README
-
-# Automatically load overlays for detected cameras
-camera_auto_detect=1
-
-# Automatically load overlays for detected DSI displays
-display_auto_detect=1
 
 # Automatically load initramfs files, if found
 auto_initramfs=1
 
-# Enable DRM VC4 V3D driver
-dtoverlay=vc4-kms-v3d
-max_framebuffers=2
+# Enable DRM VC4 V3D driver con CMA extendido y desactivacion de HDMI secundario flotante
+dtoverlay=vc4-kms-v3d,cma-512,nohdmi1
+max_framebuffers=1
+gpu_mem=256
+
+# Forzado de potencia y timing para panel 7" QDtech / MPI7002 (Puerto HDMI-0 / HDMI-A-1)
+hdmi_force_hotplug:0=1
+config_hdmi_boost:0=7
+hdmi_drive:0=2
+hdmi_group:0=2
+hdmi_mode:0=87
+hdmi_cvt:0=1024 600 60 6 0 0 0
 
 # Don't have the firmware create an initial video= setting in cmdline.txt.
 # Use the kernel's default instead.
@@ -40,9 +35,6 @@ disable_overscan=1
 arm_boost=1
 
 [cm4]
-# Enable host mode on the 2711 built-in XHCI USB controller.
-# This line should be removed if the legacy DWC2 controller is required
-# (e.g. for USB device mode) or if USB support is not required.
 otg_mode=1
 
 [cm5]
@@ -50,8 +42,6 @@ dtoverlay=dwc2,dr_mode=host
 
 [pi5]
 dtoverlay=nospi10
-
-[all]
 
 [all]
 kernel=kernel8_rt.img
