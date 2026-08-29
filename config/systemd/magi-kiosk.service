@@ -12,7 +12,7 @@ StandardOutput=journal
 StandardError=journal
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=WAYLAND_DISPLAY=wayland-0
-Environment=WLR_BACKENDS=drm
+Environment=WLR_BACKENDS=drm,libinput
 Environment=WLR_RENDERER=gles2
 Environment=LIBSEAT_BACKEND=seatd
 Environment=SEATD_VTBOUND=0
