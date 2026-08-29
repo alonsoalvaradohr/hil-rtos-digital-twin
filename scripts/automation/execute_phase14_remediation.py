@@ -137,3 +137,4 @@ print("[OK] Captura guardada en telemetry/magi_screen_remediated.png")
 
 client.close()
 print("\n[✓] FASE 14.0: REMEDIACIÓN Y RESTAURACIÓN NATIVA COMPLETADA CON ÉXITO.")
+
