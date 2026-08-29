@@ -130,3 +130,4 @@ check("dmesg -T | grep -iE 'underrun|timeout|flip|error' | tail -n 20")
 
 client.close()
 print("\n[✓] FASE 9.3 COMPLETADA EXITOSAMENTE CON ESTABILIDAD FISICA ABSOLUTA.")
+
