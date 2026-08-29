@@ -59,3 +59,4 @@ sudo_run("ls -la /dev/input/")
 sudo_run("libinput list-devices || true")
 
 client.close()
+
