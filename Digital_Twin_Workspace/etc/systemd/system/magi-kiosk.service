@@ -1,8 +1,7 @@
 [Unit]
-Description=MAGI Wayland Kiosk Compositor (Core 1 - Interactive)
+Description=MAGI Wayland Kiosk Compositor (Core 1 - Interactive Labwc)
 After=network.target systemd-user-sessions.service magi-ui.service seatd.service
 Wants=magi-ui.service seatd.service
-Conflicts=user-host
 
 [Service]
 User=alonso
@@ -19,7 +18,7 @@ Environment=SEATD_VTBOUND=0
 Environment=XDG_SESSION_TYPE=wayland
 Environment=XCURSOR_SIZE=24
 Environment=XCURSOR_THEME=Adwaita
-ExecStart=/usr/bin/cage -s -- /usr/bin/chromium-browser --kiosk --app=http://127.0.0.1:8080/ --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0
+ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --kiosk --app=http://127.0.0.1:8080/ --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0"
 Restart=always
 RestartSec=2s
 CPUAffinity=1
