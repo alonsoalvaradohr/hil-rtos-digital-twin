@@ -27,3 +27,4 @@ def sudo_run(cmd):
 
 sudo_run("apt-get install -y evtest libinput-tools wtype")
 client.close()
+
