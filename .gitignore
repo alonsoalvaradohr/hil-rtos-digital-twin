@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # .gitignore — HIL-RTOS Digital Twin & Hypervisor
 # Diseñado por Agente DELTA · Consenso DELTA/EPSILON/ZETA
 # ============================================================
@@ -57,6 +57,7 @@ temp/
 
 # --- IDE y Sistema Operativo ---
 .vscode/settings.json
+.history/
 .idea/
 *.swp
 *.swo
