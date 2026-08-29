@@ -6,6 +6,7 @@
 # --- Secretos y Credenciales (EPSILON: veto absoluto) ---
 .env
 .env.*
+!.env.example
 *.secret
 *.key
 *.pem
