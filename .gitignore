@@ -1,4 +1,4 @@
-﻿# ============================================================
+# ============================================================
 # .gitignore — HIL-RTOS Digital Twin & Hypervisor
 # Diseñado por Agente DELTA · Consenso DELTA/EPSILON/ZETA
 # ============================================================
@@ -6,6 +6,7 @@
 # --- Secretos y Credenciales (EPSILON: veto absoluto) ---
 .env
 .env.*
+!.env.example
 *.secret
 *.key
 *.pem
@@ -57,6 +58,7 @@ temp/
 
 # --- IDE y Sistema Operativo ---
 .vscode/settings.json
+.history/
 .idea/
 *.swp
 *.swo
@@ -65,7 +67,7 @@ Thumbs.db
 .DS_Store
 desktop.ini
 
-# --- Artefactos de compilación C/C++ ---
+# --- Artefactos de compilación C/C++ y Paquetes ---
 *.o
 *.a
 *.so
@@ -73,6 +75,7 @@ desktop.ini
 *.bin
 *.hex
 *.map
+*.deb
 
 # --- SSH (nunca en repositorio) ---
 id_rsa

@@ -1,17 +1,22 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    NEON GENESIS EVANGELION - MAGI SYSTEM HMI STYLESHEET
    Resolution: 1024x600 (7-inch Touch Display Kiosk)
-   Dedicated Core 1 UI
+   Dedicated Core 1 UI, Touch & Audio Sandboxing
    ========================================================================== */
 
 :root {
     --bg-black: #000000;
     --magi-cyan: #4FC3F7;
     --magi-cyan-active: #81D4FA;
+    --magi-cyan-dark: #0288D1;
     --magi-orange: #FF9900;
     --magi-orange-dark: #CC7A00;
+    --magi-orange-glow: rgba(255, 153, 0, 0.4);
     --magi-green: #00FF66;
+    --magi-green-dark: #009933;
+    --magi-green-glow: rgba(0, 255, 102, 0.5);
     --magi-red: #FF3333;
+    --magi-red-glow: rgba(255, 51, 51, 0.5);
     --text-white: #FFFFFF;
     --text-black: #000000;
     --panel-dark: #0A0A0A;
@@ -37,11 +42,58 @@ body {
 }
 
 /* ==========================================================================
+   SVG ICONS & UTILITIES
+   ========================================================================== */
+.magi-svg-icon {
+    display: inline-block;
+    vertical-align: middle;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+/* Signal Meter (CSS Pure Replacement for Unicode) */
+.signal-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.signal-meter {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+    width: 18px;
+}
+
+.signal-bar {
+    width: 3px;
+    background: #333333;
+    border-radius: 1px;
+}
+
+.signal-bar.bar-1 { height: 4px; }
+.signal-bar.bar-2 { height: 7px; }
+.signal-bar.bar-3 { height: 10px; }
+.signal-bar.bar-4 { height: 14px; }
+
+.signal-bar.active {
+    background: var(--magi-green);
+    box-shadow: 0 0 4px var(--magi-green);
+}
+
+.wifi-signal-text {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--magi-green);
+}
+
+/* ==========================================================================
    HEADER SECTION
    ========================================================================== */
 #magi-header {
-    height: 70px;
-    padding: 6px 16px 4px 16px;
+    height: 64px;
+    padding: 4px 16px 2px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -64,11 +116,12 @@ body {
 .header-tech-info {
     display: flex;
     flex-direction: column;
-    font-size: 11px;
+    font-size: 10px;
     font-family: 'Courier New', monospace;
     font-weight: bold;
     color: var(--magi-orange);
-    line-height: 1.2;
+    line-height: 1.25;
+    white-space: nowrap;
 }
 
 .header-center {
@@ -123,6 +176,9 @@ body {
     border-radius: 4px;
     cursor: pointer;
     letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     transition: background 0.15s, color 0.15s;
 }
 
@@ -161,6 +217,16 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity 0.15s ease-in-out;
+}
+
+#magi-main-view.minimized {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 /* Central Negative Space MAGI Logo */
@@ -191,6 +257,56 @@ body {
     margin-top: -6px;
 }
 
+/* MAGI Debate Visualizer Banner */
+.magi-debate-banner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(10, 10, 10, 0.95);
+    border: 2px solid var(--magi-orange);
+    border-radius: 6px;
+    padding: 12px 20px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0 0 25px var(--magi-orange-glow);
+    z-index: 20;
+    pointer-events: none;
+    animation: magi-glow 1.5s infinite alternate;
+}
+
+.debate-status-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+.debate-sync-meter {
+    width: 100%;
+    height: 8px;
+    background: #222;
+    border-radius: 4px;
+    margin: 8px 0;
+    overflow: hidden;
+    border: 1px solid #444;
+}
+
+.debate-sync-bar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, var(--magi-orange), var(--magi-green));
+    transition: width 0.2s ease-out;
+}
+
+.debate-verdict {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--magi-cyan);
+    letter-spacing: 1px;
+}
+
 /* POD BUTTONS (BALTHASAR, CASPER, MELCHIOR) */
 .magi-pod {
     position: absolute;
@@ -202,7 +318,7 @@ body {
     justify-content: center;
     align-items: center;
     box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
-    transition: transform 0.1s, background-color 0.1s;
+    transition: transform 0.15s, background-color 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .magi-pod:active {
@@ -210,23 +326,67 @@ body {
     transform: scale(0.98);
 }
 
+.pod-inner-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 4px 10px;
+}
+
+.pod-jp-header {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    opacity: 0.85;
+    margin-bottom: -2px;
+}
+
 .pod-name {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 900;
     letter-spacing: 3px;
     font-family: 'Arial Black', Impact, sans-serif;
 }
 
 .pod-subtext {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
     margin-top: 2px;
-    opacity: 0.85;
+    opacity: 0.9;
 }
 
-/* Pod 2: BALTHASAR • 2 (Top Center - AntiGravity CLI Terminal) */
+.pod-status-badge {
+    font-size: 10px;
+    font-family: monospace;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--text-black);
+    margin-top: 4px;
+    letter-spacing: 1px;
+}
+
+.pod-progress-box {
+    width: 80%;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.pod-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #000;
+    transition: width 0.2s ease-out;
+}
+
+/* Pod 2: BALTHASAR • 2 (Top Center - AntiGravity AI Agent Cockpit) */
 #pod-balthasar {
     width: 420px;
     height: 140px;
@@ -253,9 +413,51 @@ body {
     clip-path: polygon(35px 0%, calc(100% - 25px) 0%, 100% 25px, 100% 100%, 15px 100%, 0% calc(100% - 15px), 0% 35px);
 }
 
+/* Pod States: Debating / Synchronizing */
+.magi-pod.debating {
+    background-color: var(--magi-orange) !important;
+    box-shadow: 0 0 25px var(--magi-orange-glow) !important;
+    animation: magi-blink 0.6s infinite alternate;
+}
+
+.magi-pod.debating .pod-status-badge {
+    background: #000;
+    color: var(--magi-orange);
+}
+
+.magi-pod.debating .pod-progress-fill {
+    background: #000;
+}
+
+/* Pod States: Consensus Reached */
+.magi-pod.consensus {
+    background-color: var(--magi-green) !important;
+    box-shadow: 0 0 30px var(--magi-green-glow) !important;
+}
+
+.magi-pod.consensus .pod-status-badge {
+    background: #000;
+    color: var(--magi-green);
+}
+
+.magi-pod.consensus .pod-progress-fill {
+    background: #000;
+    width: 100% !important;
+}
+
+@keyframes magi-blink {
+    0% { opacity: 0.85; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes magi-glow {
+    0% { box-shadow: 0 0 10px var(--magi-orange-glow); }
+    100% { box-shadow: 0 0 30px var(--magi-orange); }
+}
+
 /* ==========================================================================
    FOOTER SECTION
-   ========================================================================== */
+   ========================================================================= */
 #magi-footer {
     height: 70px;
     padding: 6px 16px;
@@ -293,7 +495,7 @@ body {
 }
 
 /* ==========================================================================
-   FULLSCREEN SUB-VIEWS (TERMINAL, CASPER, MELCHIOR)
+   FULLSCREEN SUB-VIEWS (NON-DESTRUCTIVE DOM PERSISTENCE)
    ========================================================================== */
 .magi-subview {
     position: absolute;
@@ -303,8 +505,18 @@ body {
     height: 600px;
     background-color: var(--bg-black);
     z-index: 100;
-    display: none;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    display: flex;
     flex-direction: column;
+    transition: opacity 0.15s ease-in-out;
+}
+
+.magi-subview.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .subview-header {
@@ -317,8 +529,20 @@ body {
     padding: 0 16px;
 }
 
+.subview-title-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.subview-jp {
+    font-size: 10px;
+    font-weight: 900;
+    color: var(--magi-orange);
+    letter-spacing: 2px;
+}
+
 .subview-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 900;
     letter-spacing: 2px;
     color: var(--magi-cyan);
@@ -328,9 +552,9 @@ body {
     background: var(--magi-orange);
     color: var(--text-black);
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 900;
-    padding: 8px 18px;
+    padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
     letter-spacing: 1px;
@@ -348,6 +572,275 @@ body {
     padding: 16px;
     overflow-y: auto;
     background: #050505;
+}
+
+/* ==========================================================================
+   BALTHASAR COCKPIT: MODE SELECTOR & AGENT PANELS
+   ========================================================================== */
+.agent-mode-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-mode {
+    background: #181818;
+    color: #AAA;
+    border: 1px solid #333;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 1px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.btn-mode.active {
+    background: var(--magi-cyan);
+    color: var(--text-black);
+    border-color: var(--magi-cyan);
+}
+
+.agent-panel {
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* VOICE PANEL & PUSH-TO-TALK */
+.voice-card {
+    background: #0D0D0D;
+    border: 1px solid #333;
+    border-top: 3px solid var(--magi-orange);
+    padding: 12px 16px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.voice-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--magi-orange);
+}
+
+.voice-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #555;
+}
+
+.voice-dot.ready {
+    background: var(--magi-green);
+    box-shadow: 0 0 6px var(--magi-green);
+}
+
+.voice-dot.recording {
+    background: var(--magi-red);
+    box-shadow: 0 0 10px var(--magi-red);
+    animation: ptt-pulse 0.6s infinite alternate;
+}
+
+.voice-controls-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.btn-ptt {
+    width: 220px;
+    height: 110px;
+    background: linear-gradient(135deg, #1A1A1A, #0D0D0D);
+    border: 2px solid var(--magi-orange);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(255, 153, 0, 0.2);
+    transition: transform 0.08s, background 0.15s, border-color 0.15s;
+}
+
+.btn-ptt:active, .btn-ptt.recording {
+    background: linear-gradient(135deg, #990000, #550000);
+    border-color: var(--magi-red);
+    box-shadow: 0 0 25px var(--magi-red-glow);
+    transform: scale(0.97);
+}
+
+.ptt-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--magi-orange);
+    font-weight: 900;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.btn-ptt.recording .ptt-inner {
+    color: #FFF;
+}
+
+.voice-transcript-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.transcript-title {
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: bold;
+    color: #AAA;
+}
+
+#voice-transcript-output {
+    flex: 1;
+    min-height: 55px;
+    background: #000;
+    border: 1px solid #444;
+    color: #FFF;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 8px;
+    border-radius: 4px;
+    resize: none;
+}
+
+.transcript-actions {
+    display: flex;
+    gap: 10px;
+}
+
+@keyframes ptt-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* AGENT CONSOLE & OUTPUT CARD */
+.agent-output-card {
+    background: #0A0A0A;
+    border: 1px solid #333;
+    border-top: 3px solid var(--magi-cyan);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 220px;
+}
+
+.agent-output-header {
+    height: 30px;
+    background: #111;
+    border-bottom: 1px solid #222;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--magi-cyan);
+}
+
+.exec-state-idle {
+    color: #888;
+}
+
+.exec-state-running {
+    color: var(--magi-orange);
+    animation: magi-blink 0.5s infinite alternate;
+}
+
+.exec-state-done {
+    color: var(--magi-green);
+}
+
+#agent-output-console, #agent-text-output-console {
+    flex: 1;
+    padding: 10px 12px;
+    background: #000;
+    color: var(--magi-green);
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+/* TEXT PROMPT BUILDER */
+.prompt-builder-card {
+    background: #0D0D0D;
+    border: 1px solid #333;
+    border-top: 3px solid var(--magi-cyan);
+    padding: 12px 16px;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.prompt-quick-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.chip-label {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--magi-orange);
+    font-weight: bold;
+}
+
+.prompt-chip {
+    background: #1A1A1A;
+    border: 1px solid #444;
+    color: var(--magi-cyan);
+    font-size: 11px;
+    font-weight: bold;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.prompt-chip:active {
+    background: var(--magi-cyan);
+    color: var(--text-black);
+}
+
+.prompt-input-row {
+    display: flex;
+    gap: 10px;
+}
+
+#agent-text-input {
+    flex: 1;
+    height: 60px;
+    background: #000;
+    border: 1px solid #444;
+    color: #FFF;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 8px;
+    border-radius: 4px;
+    resize: none;
 }
 
 /* Terminal iframe */
@@ -403,11 +896,16 @@ body {
     background: var(--magi-cyan);
     color: var(--text-black);
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 900;
     padding: 10px;
     border-radius: 4px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    letter-spacing: 1px;
 }
 
 .eva-btn-action:active {
@@ -478,6 +976,9 @@ body {
     padding: 6px 14px;
     border-radius: 3px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .tab-btn.active {
@@ -524,11 +1025,6 @@ body {
     font-size: 11px;
     color: #888;
     margin-top: 2px;
-}
-
-.wifi-signal {
-    font-size: 13px;
-    color: var(--magi-green);
     font-family: monospace;
 }
 
