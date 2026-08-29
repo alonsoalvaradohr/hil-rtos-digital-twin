@@ -64,6 +64,10 @@ rc_xml_content = """<?xml version="1.0" encoding="UTF-8"?>
     <decoration>none</decoration>
     <gap>0</gap>
   </core>
+  <focus>
+    <followMouse>yes</followMouse>
+    <raiseOnFocus>yes</raiseOnFocus>
+  </focus>
   <touch>
     <mapToOutput>HDMI-A-1</mapToOutput>
   </touch>
@@ -78,6 +82,8 @@ rc_xml_content = """<?xml version="1.0" encoding="UTF-8"?>
   <windowRules>
     <windowRule identifier="*" serverDecoration="no">
       <action name="Maximize"/>
+      <action name="Focus"/>
+      <action name="Raise"/>
     </windowRule>
   </windowRules>
 </labwc_config>
@@ -87,7 +93,6 @@ autostart_content = """#!/bin/sh
 # Autostart para Labwc Kiosko MAGI
 /usr/bin/chromium-browser \\
   --kiosk \\
-  --app=http://127.0.0.1:8080/ \\
   --noerrdialogs \\
   --disable-infobars \\
   --no-first-run \\
@@ -105,7 +110,8 @@ autostart_content = """#!/bin/sh
   --disable-features=Translate,OptimizationHints \\
   --user-data-dir=/tmp/chromium_magi_profile \\
   --window-size=1024,600 \\
-  --window-position=0,0 &
+  --window-position=0,0 \\
+  http://127.0.0.1:8080/ &
 """
 
 environment_content = """XCURSOR_THEME=Adwaita
@@ -115,6 +121,7 @@ WLR_RENDERER=gles2
 LIBSEAT_BACKEND=seatd
 SEATD_VTBOUND=0
 XDG_SESSION_TYPE=wayland
+WAYLAND_DISPLAY=wayland-0
 """
 
 sftp = client.open_sftp()
@@ -127,7 +134,7 @@ with sftp.open('[HOME_REDACTED]', 'w') as f:
 sftp.close()
 
 user_run("chmod +x [HOME_REDACTED]")
-print("[OK] Archivos de configuración de labwc creados en ~/.config/labwc/")
+print("[OK] Archivos de configuración de labwc actualizados en ~/.config/labwc/")
 
 # 2. Configurar magi-kiosk.service con labwc
 print("\n--- PASO 2: Configuración de magi-kiosk.service con Labwc ---")
@@ -144,6 +151,7 @@ StandardInput=null
 StandardOutput=journal
 StandardError=journal
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
 Environment=WLR_BACKENDS=drm
 Environment=WLR_RENDERER=gles2
 Environment=LIBSEAT_BACKEND=seatd
@@ -151,7 +159,7 @@ Environment=SEATD_VTBOUND=0
 Environment=XDG_SESSION_TYPE=wayland
 Environment=XCURSOR_SIZE=24
 Environment=XCURSOR_THEME=Adwaita
-ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --kiosk --app=http://127.0.0.1:8080/ --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0"
+ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/"
 Restart=always
 RestartSec=2s
 CPUAffinity=1
