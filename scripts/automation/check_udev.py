@@ -26,3 +26,4 @@ sudo_run("udevadm info /dev/input/event1")
 sudo_run("udevadm info /dev/input/event2")
 
 client.close()
+

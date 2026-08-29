@@ -2,3 +2,4 @@
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
 ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="mouse*", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
 ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_SEAT}="seat0", TAG+="seat", TAG+="uaccess", MODE="0660", GROUP="input"
+
