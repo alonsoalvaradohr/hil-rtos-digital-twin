@@ -26,3 +26,4 @@ run('which grim slurp wl-copy wlr-randr cage labwc')
 run('cat /boot/firmware/config.txt | grep -iE "dtoverlay|vc4|hdmi|display"')
 
 client.close()
+
