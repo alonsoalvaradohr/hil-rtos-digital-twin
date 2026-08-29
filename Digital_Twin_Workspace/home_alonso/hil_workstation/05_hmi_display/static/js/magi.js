@@ -24,18 +24,32 @@ class MagiUI {
             if (clockEl) clockEl.innerText = `TIME: ${timeStr} UTC`;
         }, 100);
 
-        // Pod Clicks -> View Switching
+        // Helper para respuesta táctil y de puntero instantánea sin tap-delay
+        const bindTap = (el, handler) => {
+            if (!el) return;
+            let lastTrigger = 0;
+            const trigger = (e) => {
+                const now = Date.now();
+                if (now - lastTrigger < 250) return;
+                lastTrigger = now;
+                handler(e);
+            };
+            el.addEventListener("pointerup", trigger);
+            el.addEventListener("click", trigger);
+        };
+
+        // Pod Clicks / Touch -> View Switching
         const podBalthasar = document.getElementById("pod-balthasar");
         const podCasper = document.getElementById("pod-casper");
         const podMelchior = document.getElementById("pod-melchior");
 
-        if (podBalthasar) podBalthasar.addEventListener("click", () => this.switchView("balthasar"));
-        if (podCasper) podCasper.addEventListener("click", () => this.switchView("casper"));
-        if (podMelchior) podMelchior.addEventListener("click", () => this.switchView("melchior"));
+        bindTap(podBalthasar, () => this.switchView("balthasar"));
+        bindTap(podCasper, () => this.switchView("casper"));
+        bindTap(podMelchior, () => this.switchView("melchior"));
 
         // Return to MAGI buttons (Layer Minimizing without DOM destruction)
         document.querySelectorAll(".btn-return-magi").forEach(btn => {
-            btn.addEventListener("click", () => this.switchView("main"));
+            bindTap(btn, () => this.switchView("main"));
         });
 
         // Balthasar Mode Selector Buttons
@@ -43,9 +57,9 @@ class MagiUI {
         const btnModeText = document.getElementById("btn-mode-text");
         const btnModeTerminal = document.getElementById("btn-mode-terminal");
 
-        if (btnModeVoice) btnModeVoice.addEventListener("click", () => this.switchAgentMode("voice"));
-        if (btnModeText) btnModeText.addEventListener("click", () => this.switchAgentMode("text"));
-        if (btnModeTerminal) btnModeTerminal.addEventListener("click", () => this.switchAgentMode("terminal"));
+        bindTap(btnModeVoice, () => this.switchAgentMode("voice"));
+        bindTap(btnModeText, () => this.switchAgentMode("text"));
+        bindTap(btnModeTerminal, () => this.switchAgentMode("terminal"));
 
         // Push-to-Talk Setup
         this.setupPushToTalk();
@@ -53,7 +67,7 @@ class MagiUI {
         // Prompt Dispatch Buttons
         const btnDispatchVoice = document.getElementById("btn-dispatch-voice-prompt");
         if (btnDispatchVoice) {
-            btnDispatchVoice.addEventListener("click", () => {
+            bindTap(btnDispatchVoice, () => {
                 const txt = document.getElementById("voice-transcript-output")?.value || "";
                 this.dispatchPrompt(txt);
             });
@@ -61,7 +75,7 @@ class MagiUI {
 
         const btnDispatchText = document.getElementById("btn-dispatch-text-prompt");
         if (btnDispatchText) {
-            btnDispatchText.addEventListener("click", () => {
+            bindTap(btnDispatchText, () => {
                 const txt = document.getElementById("agent-text-input")?.value || "";
                 this.dispatchPrompt(txt);
             });
@@ -69,7 +83,7 @@ class MagiUI {
 
         // Quick Macro Chips
         document.querySelectorAll(".prompt-chip").forEach(chip => {
-            chip.addEventListener("click", (e) => {
+            bindTap(chip, (e) => {
                 const prompt = e.currentTarget.getAttribute("data-prompt");
                 const textInput = document.getElementById("agent-text-input");
                 if (textInput) {
@@ -82,7 +96,7 @@ class MagiUI {
         // Test Voice TTS Button
         const btnTestTts = document.getElementById("btn-test-tts");
         if (btnTestTts) {
-            btnTestTts.addEventListener("click", () => {
+            bindTap(btnTestTts, () => {
                 this.speakMagi("MAGI SYSTEM. BALTHASAR DOS. SUPERCOMPUTADORA INDUSTRIAL HIL EN LINEA.");
             });
         }
@@ -94,20 +108,20 @@ class MagiUI {
         const speedSlider = document.getElementById("speed-slider");
 
         if (btnMotorEnable) {
-            btnMotorEnable.addEventListener("click", () => {
+            bindTap(btnMotorEnable, () => {
                 const spd = speedSlider ? parseFloat(speedSlider.value) : 100.0;
                 this.sendHilCommand(1, spd, 1);
             });
         }
 
         if (btnMotorStop) {
-            btnMotorStop.addEventListener("click", () => {
+            bindTap(btnMotorStop, () => {
                 this.sendHilCommand(1, 0.0, 1);
             });
         }
 
         if (btnMotorEstop) {
-            btnMotorEstop.addEventListener("click", () => {
+            bindTap(btnMotorEstop, () => {
                 this.sendHilCommand(999, 0.0, 0x80000000); // E-STOP
             });
         }
