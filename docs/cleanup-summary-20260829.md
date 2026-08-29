@@ -102,15 +102,17 @@ v8.0.0
 ========================================================================
 ```
 
-### Fallo 3: Confirmación física del operador
-- En espera de registro literal de la respuesta del operador:
-  - Interacción táctil en BALTHASAR • 2
-  - Interacción táctil en NETWORK
-  - Entrada de texto por teclado USB físico
+### Fallo 3 & Fallo 4: Confirmación física del operador y persistencia post-reinicio limpio
 
-### Fallo 4: Persistencia post-reinicio limpio
-- Se detectó que `magi-kiosk.service` estaba en estado `disabled` tras reinicio; se ejecutó `systemctl enable magi-kiosk.service` y se realizó un segundo reinicio limpio.
-- Output literal tras booteo en frío sin intervención manual:
+#### Respuesta literal del operador en hardware físico:
+> *"Sí, inicia con magi"*  
+> *"sí, cambia a Autonomous agent // baltasar . 2"*  
+> *"sí, abre el modal de networkl"*  
+> *"sí, el mouse y teclado usb funcionan"*
+
+#### Persistencia tras booteo limpio (`sudo reboot` sin intervención manual):
+- Durante el primer reboot se identificó que `magi-kiosk.service` estaba en estado `disabled`; se ejecutó `systemctl enable magi-kiosk.service` y se lanzó un segundo reinicio en frío.
+- Output literal tras el arranque:
 ```text
 >>> systemctl is-active seatd magi-ui magi-kiosk
 active
@@ -120,6 +122,7 @@ active
 >>> Uptime:
  17:05:47 up 0 min,  2 users,  load average: 2.08, 0.50, 0.17
 ```
+
 
 ### Fallo 5: Limpieza de `override.conf` en `seatd.service.d`
 - Output literal de verificación:
