@@ -18,7 +18,7 @@ TTYPath=/dev/tty1
 StandardInput=tty
 StandardOutput=journal
 StandardError=journal
-ExecStart=/usr/bin/cage -s -- /usr/bin/chromium --ozone-platform=wayland --no-sandbox --kiosk --noerrdialogs --disable-infobars --no-first-run --in-process-gpu --disable-gpu-vsync --disable-features=Translate,OptimizationHints,MediaRouter --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/
+ExecStart=/usr/bin/cage -s -- /usr/bin/chromium-browser --kiosk --noerrdialogs --disable-infobars --no-first-run --ozone-platform=wayland --enable-features=OverlayScrollbar --touch-events=enabled --enable-touch-events --disable-translate --disable-features=Translate,OptimizationHints --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/
 Restart=always
 RestartSec=2s
 CPUAffinity=1
