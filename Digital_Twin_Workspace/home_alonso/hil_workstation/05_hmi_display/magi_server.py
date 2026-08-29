@@ -15,6 +15,8 @@ import mmap
 from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 # Constantes de Memoria Compartida
 SHM_PATH = "/dev/shm/hil_shm"
@@ -75,9 +77,6 @@ def get_system_status():
     return status
 
 def generate_magi_deliberation_response(prompt, exec_time, raw_cli_out=""):
-    """
-    Genera veredicto de consenso tripartito estructurado para el HMI de Evangelion.
-    """
     output_lines = []
     output_lines.append("================================================================")
     output_lines.append("MAGI SYSTEM // BALTHASAR • 2 - AUTONOMOUS REASONING CORE 1")
@@ -130,9 +129,6 @@ def api_status():
 
 @app.route("/api/magi/prompt", methods=["POST"])
 def api_magi_prompt():
-    """
-    Inyecta un prompt o instrucción táctica a AntiGravity CLI anclado estrictamente a Core 1.
-    """
     data = request.get_json(silent=True) or {}
     if not data and request.form:
         data = request.form.to_dict()
@@ -182,9 +178,6 @@ def api_magi_prompt():
 
 @app.route("/api/audio/tts", methods=["POST"])
 def api_audio_tts():
-    """
-    Sintetizador de voz andrógina/acelerada ejecutado en Core 1.
-    """
     data = request.get_json(silent=True) or {}
     if not data and request.form:
         data = request.form.to_dict()
@@ -198,7 +191,6 @@ def api_audio_tts():
 
     print(f"[+] MAGI TTS SYNTHESIS (Core 1): '{text}' [Rate: {rate}, Pitch: {pitch}]")
 
-    # Intentar síntesis local con espeak-ng / espeak anclado a Core 1 si está disponible
     try:
         tts_cmd = None
         for bin_name in ["espeak-ng", "espeak"]:
@@ -211,7 +203,6 @@ def api_audio_tts():
             subprocess.Popen(tts_cmd)
             return jsonify({"success": True, "engine": tts_cmd[2], "text": text})
         else:
-            # Reconocimiento / Fallback auditivo
             return jsonify({"success": True, "engine": "web_speech_api_proxy", "text": text})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -319,7 +310,6 @@ def api_hil_command():
     target_speed = float(data.get("speed", 0.0))
     flags = data.get("flags", 1) # CTRL_FLAG_MOTOR_ENABLE
 
-    # Publicar comando a MQTT
     payload = json.dumps({"action_id": action_id, "speed": target_speed, "flags": flags})
     try:
         subprocess.run(["mosquitto_pub", "-t", "hil/command", "-m", payload], timeout=1)
