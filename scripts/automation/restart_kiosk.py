@@ -58,3 +58,4 @@ size = os.path.getsize('E:/alons/Documents/Raspberry HIL/magi_screen.png')
 print(f"\n[OK] Screenshot final descargado: E:/alons/Documents/Raspberry HIL/magi_screen.png ({size} bytes)")
 
 client.close()
+

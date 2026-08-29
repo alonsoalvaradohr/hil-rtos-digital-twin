@@ -38,3 +38,4 @@ for dev in ['hw:0,0', 'hw:1,0']:
     print(out)
 
 client.close()
+
