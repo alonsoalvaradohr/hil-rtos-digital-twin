@@ -19,8 +19,8 @@ Environment=SEATD_VTBOUND=0
 Environment=XDG_SESSION_TYPE=wayland
 Environment=XCURSOR_SIZE=24
 Environment=XCURSOR_THEME=Adwaita
-ExecStartPre=/bin/rm -rf /tmp/chromium_magi_profile/Singleton* /tmp/chromium_magi_profile/lockfile
-ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --no-sandbox --disable-setuid-sandbox --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --remote-debugging-port=9222 --use-fake-ui-for-media-stream --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --overscroll-history-navigation=0 --disable-translate --disable-features=Translate,OptimizationHints --user-data-dir=/tmp/chromium_magi_profile --window-size=1024,600 --window-position=0,0 http://127.0.0.1:8080/"
+ExecStartPre=/bin/rm -rf /tmp/chromium_magi_profile/Singleton*
+ExecStart=/usr/bin/labwc -s "/usr/bin/chromium-browser --no-sandbox --disable-setuid-sandbox --kiosk --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --disable-session-crashed-bubble --disable-extensions --disable-background-networking --disable-sync --disable-translate --metrics-recording-only --no-service-autorun --remote-debugging-port=9222 --ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection --touch-events=enabled --disable-pinch --user-data-dir=/tmp/chromium_magi_profile http://127.0.0.1:8080/"
 Restart=always
 RestartSec=2s
 CPUAffinity=1

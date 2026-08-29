@@ -94,3 +94,4 @@ print("[OK] Captura guardada en telemetry/magi_screen_nosandbox.png")
 
 client.close()
 print("\n[✓] FASE 15.0: DESACTIVACIÓN DE SANDBOX Y DESPLIEGUE COMPLETADO.")
+
