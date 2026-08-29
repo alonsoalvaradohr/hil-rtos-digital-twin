@@ -94,3 +94,4 @@ print("[OK] Captura guardada en telemetry/magi_screen_phase16.png")
 
 client.close()
 print("\n[✓] FASE 16.0: CONSOLIDACIÓN DE INSTANCIA ÚNICA Y KIOSKO WAYLAND COMPLETADA.")
+
