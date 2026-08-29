@@ -24,18 +24,24 @@ class MagiUI {
             if (clockEl) clockEl.innerText = `TIME: ${timeStr} UTC`;
         }, 100);
 
-        // Helper para respuesta táctil y de puntero instantánea sin tap-delay
+        // Helper para respuesta táctil y de puntero instantánea sin tap-delay ni doble disparo
         const bindTap = (el, handler) => {
             if (!el) return;
-            let lastTrigger = 0;
-            const trigger = (e) => {
-                const now = Date.now();
-                if (now - lastTrigger < 250) return;
-                lastTrigger = now;
+            let touchHandled = false;
+            el.addEventListener("pointerdown", () => {
+                el.style.opacity = "0.75";
+            });
+            el.addEventListener("pointerup", (e) => {
+                el.style.opacity = "";
+                touchHandled = true;
+                setTimeout(() => { touchHandled = false; }, 400);
                 handler(e);
-            };
-            el.addEventListener("pointerup", trigger);
-            el.addEventListener("click", trigger);
+            });
+            el.addEventListener("click", (e) => {
+                el.style.opacity = "";
+                if (touchHandled) return;
+                handler(e);
+            });
         };
 
         // Pod Clicks / Touch -> View Switching

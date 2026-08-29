@@ -143,3 +143,4 @@ print("[OK] Captura descargada a telemetry/magi_screen_live.png")
 
 client.close()
 print("\n[✓] DESPLIEGUE Y CERTIFICACION CANONICA FASE 11.1 COMPLETADA.")
+
