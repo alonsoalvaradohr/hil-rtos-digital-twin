@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<labwc_config>
+  <core>
+    <decoration>none</decoration>
+    <gap>0</gap>
+  </core>
+  <focus>
+    <followMouse>yes</followMouse>
+    <raiseOnFocus>yes</raiseOnFocus>
+  </focus>
+  <keyboard>
+    <defaultToPoll>no</defaultToPoll>
+  </keyboard>
+  <touch>
+    <mapToOutput>HDMI-A-1</mapToOutput>
+  </touch>
+  <libinput>
+    <device category="touch">
+      <calibrationMatrix>1 0 0 0 1 0</calibrationMatrix>
+    </device>
+  </libinput>
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="no">
+      <action name="Maximize"/>
+      <action name="Focus"/>
+      <action name="Raise"/>
+    </windowRule>
+  </windowRules>
+</labwc_config>
