@@ -16,6 +16,14 @@ class MagiUI {
     }
 
     init() {
+        // Actualización del reloj en tiempo real en la cabecera MAGI
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0] + "." + Math.floor(now.getMilliseconds() / 100);
+            const clockEl = document.getElementById("system-live-clock");
+            if (clockEl) clockEl.innerText = `TIME: ${timeStr} UTC`;
+        }, 100);
+
         // Pod Clicks -> View Switching
         const podBalthasar = document.getElementById("pod-balthasar");
         const podCasper = document.getElementById("pod-casper");
