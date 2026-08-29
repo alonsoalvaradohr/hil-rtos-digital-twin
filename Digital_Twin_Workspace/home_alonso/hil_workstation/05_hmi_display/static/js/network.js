@@ -1,6 +1,6 @@
-﻿/**
+/**
  * MAGI SYSTEM - TOUCH NETWORK & BLUETOOTH MANAGER
- * Touch-optimized Network Interface (Wi-Fi via nmcli, Bluetooth via BlueZ)
+ * Sanitized for Chromium Kiosk (Zero Unicode Tofu, NERV Style)
  */
 
 class MagiNetwork {
@@ -93,7 +93,7 @@ class MagiNetwork {
             const data = await res.json();
 
             if (!data.success || !data.networks || data.networks.length === 0) {
-                this.wifiListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No se detectaron redes inalámbricas.</div>";
+                this.wifiListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No se detectaron redes inalambricas en el area.</div>";
                 return;
             }
 
@@ -102,16 +102,27 @@ class MagiNetwork {
                 const item = document.createElement("div");
                 item.className = "wifi-item";
 
-                const signalBars = (net.signal >= 75) ? "▂▄▆█" : (net.signal >= 50) ? "▂▄▆_" : (net.signal >= 25) ? "▂▄__" : "▂___";
+                const signalLevel = (net.signal >= 75) ? 4 : (net.signal >= 50) ? 3 : (net.signal >= 25) ? 2 : 1;
+                const signalBarsHtml = `
+                    <div class="signal-meter">
+                        <span class="signal-bar bar-1 ${signalLevel >= 1 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-2 ${signalLevel >= 2 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-3 ${signalLevel >= 3 ? 'active' : ''}"></span>
+                        <span class="signal-bar bar-4 ${signalLevel >= 4 ? 'active' : ''}"></span>
+                    </div>
+                `;
 
                 item.innerHTML = `
                     <div>
                         <div class="wifi-name">${this.escapeHtml(net.ssid)}</div>
-                        <div class="wifi-sec">${net.security} • Ch ${net.channel} • ${net.rate}</div>
+                        <div class="wifi-sec">${net.security} // Ch ${net.channel} // ${net.rate}</div>
                     </div>
-                    <div style="text-align: right;">
-                        <div class="wifi-signal">${signalBars} ${net.signal}%</div>
-                        <button class="eva-btn-action" style="padding: 4px 10px; font-size: 11px; margin-top: 4px;">CONECTAR</button>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                        <div class="signal-wrapper">
+                            ${signalBarsHtml}
+                            <span class="wifi-signal-text">${net.signal}%</span>
+                        </div>
+                        <button class="eva-btn-action" style="padding: 6px 12px; font-size: 11px;">CONECTAR</button>
                     </div>
                 `;
 
@@ -171,7 +182,7 @@ class MagiNetwork {
             if (data.success) {
                 if (statusMsg) {
                     statusMsg.style.color = "var(--magi-green)";
-                    statusMsg.innerText = "[✓] CONECTADO EXITOSAMENTE A " + this.selectedSSID;
+                    statusMsg.innerText = "[OK] CONECTADO EXITOSAMENTE A " + this.selectedSSID;
                 }
                 setTimeout(() => {
                     this.cancelConnectionPrompt();
@@ -181,13 +192,13 @@ class MagiNetwork {
             } else {
                 if (statusMsg) {
                     statusMsg.style.color = "var(--magi-red)";
-                    statusMsg.innerText = "[-] FALLO: " + data.message;
+                    statusMsg.innerText = "[-] ERROR: " + data.message;
                 }
             }
         } catch (e) {
             if (statusMsg) {
                 statusMsg.style.color = "var(--magi-red)";
-                statusMsg.innerText = "[-] ERROR DE RED: " + e.message;
+                statusMsg.innerText = "[-] ERROR DE ENLACE: " + e.message;
             }
         }
     }
@@ -212,9 +223,9 @@ class MagiNetwork {
                 item.innerHTML = `
                     <div>
                         <div class="wifi-name">${this.escapeHtml(dev.name)}</div>
-                        <div class="wifi-sec">${dev.mac} • ${dev.paired ? "VINCULADO" : "DISPONIBLE"}</div>
+                        <div class="wifi-sec">${dev.mac} // ${dev.paired ? "VINCULADO" : "DISPONIBLE"}</div>
                     </div>
-                    <button class="eva-btn-action" style="padding: 4px 10px; font-size: 11px;">CONECTAR</button>
+                    <button class="eva-btn-action" style="padding: 6px 12px; font-size: 11px;">CONECTAR</button>
                 `;
                 this.btListContainer.appendChild(item);
             });

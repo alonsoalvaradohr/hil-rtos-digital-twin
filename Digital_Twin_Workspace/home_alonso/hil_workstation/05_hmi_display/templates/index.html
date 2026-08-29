@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -18,7 +18,7 @@
                 <span>CODE : 473</span>
                 <span>FILE : MAGI_SYS</span>
                 <span>SYS  : PREEMPT_RT</span>
-                <span>CORE : 1 (UI/TOUCH)</span>
+                <span>CORE : 1 (UI/TOUCH/AUDIO)</span>
             </div>
         </div>
 
@@ -30,13 +30,18 @@
         <div class="header-right">
             <div class="header-tech-info" style="text-align: right;">
                 <span id="status-ip">192.168.100.30</span>
-                <span id="status-wifi-ssid">LUANA 5G</span>
+                <span id="status-wifi-ssid">ETH0 DIRECT LINK</span>
                 <span id="status-cpu-temp">52.4 °C</span>
                 <span id="status-rt-core" style="color: var(--magi-green);">CORE 3 RT ALIVE</span>
             </div>
             <div class="info-box">情報</div>
             <div class="header-jp-tag-right">解決</div>
-            <button id="btn-open-network" class="btn-network-top">📶 NETWORK</button>
+            <button id="btn-open-network" class="btn-network-top">
+                <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M12 3C7.5 3 3.4 4.8 0.4 7.8L2.2 9.6C4.8 7 8.2 5.5 12 5.5s7.2 1.5 9.8 4.1l1.8-1.8C20.6 4.8 16.5 3 12 3zm0 5C8.9 8 6 9.2 3.9 11.3l1.8 1.8C7.3 11.5 9.5 10.5 12 10.5s4.7 1 6.3 2.6l1.8-1.8C18 9.2 15.1 8 12 8zm0 5c-1.8 0-3.4.7-4.6 1.9l4.6 4.6 4.6-4.6C15.4 13.7 13.8 13 12 13z"/>
+                </svg>
+                NETWORK
+            </button>
         </div>
     </header>
 
@@ -50,41 +55,186 @@
          MAIN MAGI OVERVIEW (TRIANGULAR PODS)
          ==================================================================== -->
     <main id="magi-main-view">
-        <!-- Central Negative Space MAGI Logo -->
-        <div class="magi-center-logo">
+        <!-- Central Negative Space MAGI Logo & Consensus Banner -->
+        <div class="magi-center-logo" id="magi-center-display">
             <div class="magi-title">MAGI</div>
-            <div class="magi-subtitle">SUPERCOMPUTER SYSTEM</div>
+            <div class="magi-subtitle" id="magi-system-status-text">SUPERCOMPUTER SYSTEM</div>
+            <div id="magi-debate-banner" class="magi-debate-banner" style="display: none;">
+                <div class="debate-status-title" id="debate-title-text">DELIBERATING</div>
+                <div class="debate-sync-meter">
+                    <div class="debate-sync-bar" id="debate-sync-progress"></div>
+                </div>
+                <div class="debate-verdict" id="debate-verdict-text">SYNCHRONIZING PODS...</div>
+            </div>
         </div>
 
-        <!-- Pod 2: BALTHASAR • 2 (Top Center - AntiGravity Terminal) -->
+        <!-- Pod 2: BALTHASAR • 2 (Top Center - AntiGravity AI Agent Cockpit) -->
         <div id="pod-balthasar" class="magi-pod">
-            <div class="pod-name">BALTHASAR • 2</div>
-            <div class="pod-subtext">TERMINAL // ANTIGRAVITY CLI</div>
+            <div class="pod-inner-content">
+                <div class="pod-jp-header">第２審問</div>
+                <div class="pod-name">BALTHASAR • 2</div>
+                <div class="pod-subtext">ANTIGRAVITY AI AGENT // VOICE & CLI</div>
+                <div class="pod-status-badge" id="pod-status-balthasar">STANDBY</div>
+                <div class="pod-progress-box" id="progress-box-balthasar">
+                    <div class="pod-progress-fill" id="progress-fill-balthasar"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Pod 3: CASPER • 3 (Bottom Left - Plant Emulation) -->
+        <!-- Pod 3: CASPER • 3 (Bottom Left - Plant Emulation & Control) -->
         <div id="pod-casper" class="magi-pod">
-            <div class="pod-name">CASPER • 3</div>
-            <div class="pod-subtext">PLANT DYNAMICS & CONTROL</div>
+            <div class="pod-inner-content">
+                <div class="pod-jp-header">第３審問</div>
+                <div class="pod-name">CASPER • 3</div>
+                <div class="pod-subtext">PLANT DYNAMICS & CONTROL</div>
+                <div class="pod-status-badge" id="pod-status-casper">STANDBY</div>
+                <div class="pod-progress-box" id="progress-box-casper">
+                    <div class="pod-progress-fill" id="progress-fill-casper"></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Pod 1: MELCHIOR • 1 (Bottom Right - Real-Time Telemetry) -->
+        <!-- Pod 1: MELCHIOR • 1 (Bottom Right - Real-Time Telemetry & Jitter) -->
         <div id="pod-melchior" class="magi-pod">
-            <div class="pod-name">MELCHIOR • 1</div>
-            <div class="pod-subtext">RTOS TELEMETRY & JITTER</div>
+            <div class="pod-inner-content">
+                <div class="pod-jp-header">第１審問</div>
+                <div class="pod-name">MELCHIOR • 1</div>
+                <div class="pod-subtext">RTOS TELEMETRY & DETERMINISM</div>
+                <div class="pod-status-badge" id="pod-status-melchior">STANDBY</div>
+                <div class="pod-progress-box" id="progress-box-melchior">
+                    <div class="pod-progress-fill" id="progress-fill-melchior"></div>
+                </div>
+            </div>
         </div>
     </main>
 
     <!-- ====================================================================
-         SUBVIEW: BALTHASAR • 2 (ANTIGRAVITY CLI COCKPIT)
+         SUBVIEW: BALTHASAR • 2 (ANTIGRAVITY AI AGENT COCKPIT)
          ==================================================================== -->
     <section id="subview-balthasar" class="magi-subview">
         <div class="subview-header">
-            <div class="subview-title">BALTHASAR • 2 // ANTIGRAVITY CLI TERMINAL</div>
-            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+            <div class="subview-title-group">
+                <div class="subview-jp">人工知能代理 // BALTHASAR • 2</div>
+                <div class="subview-title">ANTIGRAVITY AI AGENT COCKPIT</div>
+            </div>
+            
+            <!-- Input Mode Selector Buttons -->
+            <div class="agent-mode-selector">
+                <button id="btn-mode-voice" class="btn-mode active">
+                    <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                    VOICE (PTT)
+                </button>
+                <button id="btn-mode-text" class="btn-mode">
+                    <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z"/>
+                    </svg>
+                    TEXT PROMPT
+                </button>
+                <button id="btn-mode-terminal" class="btn-mode">
+                    <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-12 11l3-3-3-3v2H6v2h2v2zm5 1h5v2h-5v-2z"/>
+                    </svg>
+                    INTERACTIVE CLI
+                </button>
+            </div>
+
+            <button class="btn-return-magi">
+                <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                MINIMIZE // RETURN TO MAGI
+            </button>
         </div>
-        <div class="subview-content" style="padding: 0;">
-            <iframe id="terminal-frame" src="about:blank"></iframe>
+
+        <div class="subview-content" style="padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+            <!-- MODE 1: VOICE PANEL (Push-To-Talk) -->
+            <div id="panel-agent-voice" class="agent-panel" style="display: flex;">
+                <div class="voice-card">
+                    <div class="voice-status-bar">
+                        <span id="voice-indicator" class="voice-dot ready"></span>
+                        <span id="voice-status-text">MICROPHONE READY // PUSH-TO-TALK TO DICTATE INSTRUCTION</span>
+                    </div>
+
+                    <div class="voice-controls-row">
+                        <button id="btn-push-to-talk" class="btn-ptt">
+                            <div class="ptt-inner">
+                                <svg class="ptt-icon" viewBox="0 0 24 24" width="36" height="36" fill="currentColor">
+                                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                                </svg>
+                                <span id="ptt-btn-label">HOLD TO RECORD VOICE</span>
+                            </div>
+                        </button>
+
+                        <div class="voice-transcript-container">
+                            <div class="transcript-title">TRANSCRIBED INSTRUCTION (STT):</div>
+                            <textarea id="voice-transcript-output" placeholder="Presione y mantenga presionado el botón para hablar, o dicte su orden táctica..."></textarea>
+                            <div class="transcript-actions">
+                                <button id="btn-dispatch-voice-prompt" class="eva-btn-action" style="padding: 8px 16px;">
+                                    <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                    </svg>
+                                    EXECUTE ON ANTIGRAVITY
+                                </button>
+                                <button id="btn-test-tts" class="eva-btn-action" style="background: #333; color: #FFF; padding: 8px 14px;">
+                                    <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                                    </svg>
+                                    TEST MAGI VOICE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent Execution Log / Output Box -->
+                <div class="agent-output-card">
+                    <div class="agent-output-header">
+                        <span>ANTIGRAVITY AUTONOMOUS EXECUTION LOG (CORE 1)</span>
+                        <span id="agent-exec-state" class="exec-state-idle">IDLE</span>
+                    </div>
+                    <pre id="agent-output-console">MAGI Supercomputer Cockpit initialized.
+Ready to receive voice directives or text commands for AntiGravity Autonomous Agent.
+Isolated execution strictly allocated to Core 1.</pre>
+                </div>
+            </div>
+
+            <!-- MODE 2: TEXT PROMPT PANEL -->
+            <div id="panel-agent-text" class="agent-panel" style="display: none;">
+                <div class="prompt-builder-card">
+                    <div class="prompt-quick-chips">
+                        <span class="chip-label">QUICK MACROS:</span>
+                        <button class="prompt-chip" data-prompt="Diagnosticar latencia y jitter de lazo RT en Core 3">RT LATENCY</button>
+                        <button class="prompt-chip" data-prompt="Verificar estado de memoria compartida SHM y descartes">SHM HEALTH</button>
+                        <button class="prompt-chip" data-prompt="Auditar aislamiento de hilos y afinidad de Core 1 y Core 3">CORE AFFINITY</button>
+                        <button class="prompt-chip" data-prompt="Escanear redes Wi-Fi y validar enlace Ethernet">NET TELEMETRY</button>
+                    </div>
+
+                    <div class="prompt-input-row">
+                        <textarea id="agent-text-input" placeholder="Ingrese instrucción para AntiGravity CLI (ej: 'Revisar logs de SHM y medir latencia')..."></textarea>
+                        <button id="btn-dispatch-text-prompt" class="eva-btn-action" style="min-width: 140px;">
+                            <svg class="magi-svg-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                            DISPATCH
+                        </button>
+                    </div>
+                </div>
+
+                <div class="agent-output-card" style="flex: 1;">
+                    <div class="agent-output-header">
+                        <span>ANTIGRAVITY OUTPUT STREAM</span>
+                        <span id="agent-text-exec-state" class="exec-state-idle">IDLE</span>
+                    </div>
+                    <pre id="agent-text-output-console">Awaiting dispatch instruction...</pre>
+                </div>
+            </div>
+
+            <!-- MODE 3: FULLSCREEN INTERACTIVE TERMINAL (TTYD) -->
+            <div id="panel-agent-terminal" class="agent-panel" style="display: none; height: 100%;">
+                <iframe id="terminal-frame" src="about:blank"></iframe>
+            </div>
         </div>
     </section>
 
@@ -93,8 +243,16 @@
          ==================================================================== -->
     <section id="subview-casper" class="magi-subview">
         <div class="subview-header">
-            <div class="subview-title">CASPER • 3 // HIL PLANT MODEL CONTROLLER</div>
-            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+            <div class="subview-title-group">
+                <div class="subview-jp">プラント制御 // CASPER • 3</div>
+                <div class="subview-title">HIL PLANT MODEL CONTROLLER</div>
+            </div>
+            <button class="btn-return-magi">
+                <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                MINIMIZE // RETURN TO MAGI
+            </button>
         </div>
         <div class="subview-content">
             <div class="eva-grid-2">
@@ -126,8 +284,16 @@
          ==================================================================== -->
     <section id="subview-melchior" class="magi-subview">
         <div class="subview-header">
-            <div class="subview-title">MELCHIOR • 1 // TELEMETRÍA Y DETERMINISMO</div>
-            <button class="btn-return-magi">◀ RETURN TO MAGI</button>
+            <div class="subview-title-group">
+                <div class="subview-jp">遠隔測定 // MELCHIOR • 1</div>
+                <div class="subview-title">TELEMETRÍA Y DETERMINISMO</div>
+            </div>
+            <button class="btn-return-magi">
+                <svg class="magi-svg-icon" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                </svg>
+                MINIMIZE // RETURN TO MAGI
+            </button>
         </div>
         <div class="subview-content">
             <div class="eva-grid-2">
@@ -157,8 +323,18 @@
         <div class="network-dialog">
             <div class="dialog-header">
                 <div class="dialog-tabs">
-                    <button id="tab-btn-wifi" class="tab-btn active">📶 WI-FI ADAPTER</button>
-                    <button id="tab-btn-bt" class="tab-btn">ᛒ BLUETOOTH</button>
+                    <button id="tab-btn-wifi" class="tab-btn active">
+                        <svg class="magi-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                            <path d="M12 3C7.5 3 3.4 4.8 0.4 7.8L2.2 9.6C4.8 7 8.2 5.5 12 5.5s7.2 1.5 9.8 4.1l1.8-1.8C20.6 4.8 16.5 3 12 3zm0 5C8.9 8 6 9.2 3.9 11.3l1.8 1.8C7.3 11.5 9.5 10.5 12 10.5s4.7 1 6.3 2.6l1.8-1.8C18 9.2 15.1 8 12 8zm0 5c-1.8 0-3.4.7-4.6 1.9l4.6 4.6 4.6-4.6C15.4 13.7 13.8 13 12 13z"/>
+                        </svg>
+                        WI-FI ADAPTER
+                    </button>
+                    <button id="tab-btn-bt" class="tab-btn">
+                        <svg class="magi-svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
+                        </svg>
+                        BLUETOOTH
+                    </button>
                 </div>
                 <div style="display: flex; gap: 8px;">
                     <button id="btn-rescan-wifi" class="eva-btn-action" style="padding: 4px 10px; font-size: 11px;">RE-ESCANEAR</button>
@@ -220,7 +396,7 @@
         </div>
         <div class="footer-box">
             <span class="footer-label">question :</span>
-            <span class="footer-value">SYSTEM INTEGRITY & HIL DETERMINISM STATUS</span>
+            <span class="footer-value" id="footer-status-query">SYSTEM INTEGRITY & HIL DETERMINISM STATUS</span>
         </div>
     </footer>
 
