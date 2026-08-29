@@ -50,3 +50,4 @@ run('ps -eo pid,psr,stat,etimes,comm | grep -E "cage|chromium|python3" | grep -v
 run('systemctl status magi-kiosk.service --no-pager')
 
 client.close()
+
