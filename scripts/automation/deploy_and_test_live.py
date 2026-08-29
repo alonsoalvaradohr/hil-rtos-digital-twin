@@ -83,3 +83,4 @@ print("[OK] Captura inicial descargada a telemetry/magi_screen_live.png")
 
 client.close()
 print("\n[OK] DESPLIEGUE Y CERTIFICACION DE SERVICIOS COMPLETADA.")
+
