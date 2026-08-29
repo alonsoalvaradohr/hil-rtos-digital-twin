@@ -13,40 +13,39 @@ class MagiNetwork {
     }
 
     init() {
+        const bindTap = (el, handler) => {
+            if (!el) return;
+            let lastTrigger = 0;
+            const trigger = (e) => {
+                const now = Date.now();
+                if (now - lastTrigger < 250) return;
+                lastTrigger = now;
+                handler(e);
+            };
+            el.addEventListener("pointerup", trigger);
+            el.addEventListener("click", trigger);
+        };
+
         const btnNet = document.getElementById("btn-open-network");
-        if (btnNet) {
-            btnNet.addEventListener("click", () => this.open());
-        }
+        bindTap(btnNet, () => this.open());
 
         const btnClose = document.getElementById("btn-close-network");
-        if (btnClose) {
-            btnClose.addEventListener("click", () => this.close());
-        }
+        bindTap(btnClose, () => this.close());
 
         const tabWifi = document.getElementById("tab-btn-wifi");
         const tabBt = document.getElementById("tab-btn-bt");
 
-        if (tabWifi) {
-            tabWifi.addEventListener("click", () => this.switchTab("wifi"));
-        }
-        if (tabBt) {
-            tabBt.addEventListener("click", () => this.switchTab("bluetooth"));
-        }
+        bindTap(tabWifi, () => this.switchTab("wifi"));
+        bindTap(tabBt, () => this.switchTab("bluetooth"));
 
         const btnScanWifi = document.getElementById("btn-rescan-wifi");
-        if (btnScanWifi) {
-            btnScanWifi.addEventListener("click", () => this.scanWifi());
-        }
+        bindTap(btnScanWifi, () => this.scanWifi());
 
         const btnConfirmConn = document.getElementById("btn-confirm-connect");
-        if (btnConfirmConn) {
-            btnConfirmConn.addEventListener("click", () => this.submitConnection());
-        }
+        bindTap(btnConfirmConn, () => this.submitConnection());
 
         const btnCancelConn = document.getElementById("btn-cancel-connect");
-        if (btnCancelConn) {
-            btnCancelConn.addEventListener("click", () => this.cancelConnectionPrompt());
-        }
+        bindTap(btnCancelConn, () => this.cancelConnectionPrompt());
     }
 
     open() {
@@ -126,7 +125,15 @@ class MagiNetwork {
                     </div>
                 `;
 
-                item.addEventListener("click", () => this.promptConnect(net.ssid, net.security !== "Open"));
+                let lastItemTap = 0;
+                const onConnectClick = (e) => {
+                    const now = Date.now();
+                    if (now - lastItemTap < 250) return;
+                    lastItemTap = now;
+                    this.promptConnect(net.ssid, net.security !== "Open");
+                };
+                item.addEventListener("pointerup", onConnectClick);
+                item.addEventListener("click", onConnectClick);
                 this.wifiListContainer.appendChild(item);
             });
         } catch (e) {
