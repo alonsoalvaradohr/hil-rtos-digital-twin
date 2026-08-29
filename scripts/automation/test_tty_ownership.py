@@ -79,3 +79,4 @@ time.sleep(6)
 sudo_run("fuser -v /dev/input/event* /dev/dri/card* /run/seatd.sock || true")
 
 client.close()
+

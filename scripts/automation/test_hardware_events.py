@@ -60,3 +60,4 @@ evemu-event /dev/input/event1 --type EV_KEY --code KEY_A --value 0 --sync
 user_run("WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 /home/alonso/.local/bin/grim /tmp/screen_after_hw_event.png")
 
 client.close()
+

@@ -66,3 +66,4 @@ timeout 4 cage -s -- sleep 4 > /tmp/cage_logind.log 2>&1 || true
 user_run("cat /tmp/cage_logind.log")
 
 client.close()
+
