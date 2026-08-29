@@ -8,14 +8,13 @@ dtparam=audio=on
 # Automatically load initramfs files, if found
 auto_initramfs=1
 
-# Enable DRM VC4 V3D driver con CMA extendido para evitar Pixel Underruns
-dtoverlay=vc4-kms-v3d,cma-512
-max_framebuffers=2
+# Enable DRM VC4 V3D driver con CMA extendido y desactivacion de HDMI secundario flotante
+dtoverlay=vc4-kms-v3d,cma-512,nohdmi1
+max_framebuffers=1
 gpu_mem=256
 
-# Forzado de potencia y timing para panel 7" QDtech / MPI7002
+# Forzado de potencia y timing para panel 7" QDtech / MPI7002 (Puerto HDMI-0 / HDMI-A-1)
 hdmi_force_hotplug:0=1
-hdmi_force_hotplug:1=1
 config_hdmi_boost:0=7
 hdmi_drive:0=2
 hdmi_group:0=2
