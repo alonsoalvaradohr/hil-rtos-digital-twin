@@ -98,3 +98,4 @@ sudo_run("journalctl -u magi-kiosk -n 35 --no-pager")
 sudo_run("fuser -v /dev/input/event* /dev/dri/card* || true")
 
 client.close()
+

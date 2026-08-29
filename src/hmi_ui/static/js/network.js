@@ -15,15 +15,21 @@ class MagiNetwork {
     init() {
         const bindTap = (el, handler) => {
             if (!el) return;
-            let lastTrigger = 0;
-            const trigger = (e) => {
-                const now = Date.now();
-                if (now - lastTrigger < 250) return;
-                lastTrigger = now;
+            let touchHandled = false;
+            el.addEventListener("pointerdown", () => {
+                el.style.opacity = "0.75";
+            });
+            el.addEventListener("pointerup", (e) => {
+                el.style.opacity = "";
+                touchHandled = true;
+                setTimeout(() => { touchHandled = false; }, 400);
                 handler(e);
-            };
-            el.addEventListener("pointerup", trigger);
-            el.addEventListener("click", trigger);
+            });
+            el.addEventListener("click", (e) => {
+                el.style.opacity = "";
+                if (touchHandled) return;
+                handler(e);
+            });
         };
 
         const btnNet = document.getElementById("btn-open-network");

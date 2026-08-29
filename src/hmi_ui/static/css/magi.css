@@ -31,6 +31,11 @@
     touch-action: manipulation;
 }
 
+input, textarea, [contenteditable="true"] {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
 body {
     width: 1024px;
     height: 600px;
