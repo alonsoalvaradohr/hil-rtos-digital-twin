@@ -38,3 +38,4 @@ run("cat /boot/firmware/config.txt")
 run("cat /proc/interrupts | grep -iE 'vc4|v3d|hdmi|drm'")
 
 client.close()
+
