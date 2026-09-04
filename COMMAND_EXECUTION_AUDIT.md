@@ -50,3 +50,129 @@
 | 10.0 | *EXITOSO* | `Purga Absoluta de Legacy, Saneamiento de Flags Wayland/Chromium y Restauración Táctil` | Salida: rc=0. Despliegue del enjambre de 8 subagentes de gobernanza. Purga total de archivos huérfanos, binarios .deb efímeros y scripts temporales en host y `/tmp/` del target. Diagnóstico forense de touch: remoción de restricciones y activación de `touch-action: manipulation` en CSS y frontend HMI. Sincronización atómica y certificación física en hardware real: 0 parpadeos y afinidad en Core 1. |
 | 10.1 | *EXITOSO* | `Protocolo de Sincronización Síncrona Atómica, Reloj NERV en Vivo y Verificación HDMI` | Salida: rc=0. Ejecución de `deploy_phase10_real_sync.py` forzando purga de procesos (`pkill -9 cage/chromium`), limpieza de `/tmp/` y sincronización física por SFTP de `magi_server.py`, `index.html` con reloj de alta precisión en tiempo real (`TIME: HH:MM:SS.S UTC`), `magi.js`, `network.js`, `keyboard.js` y `magi-kiosk.service` con banderas canónicas Wayland Touch. Recarga síncrona de daemons systemd (`systemctl daemon-reload && systemctl restart seatd magi-ui magi-kiosk`). Captura pericial `magi_screen_live.png` descargada y validada en silicio vivo. |
 
+---
+
+## Fase 11 — Registro atómico local previo a despliegue
+
+**Fecha:** 2026-09-03
+
+**Operador/agente:** `AGENT-EXECUTOR`
+
+**Alcance de esta iteración:** modificación exclusiva de `COMMAND_EXECUTION_AUDIT.md`; inspección y validación de solo lectura del conjunto de trabajo preexistente. No se desplegó, reinició, flasheó ni confirmó nada.
+
+**Estado:** `APROBADO CON CONDICIONES` para un commit local; `SIN EVIDENCIA SUFICIENTE` para declarar los hitos operativos o físicos.
+
+**Rollback de esta iteración:** revertir únicamente el bloque «Fase 11» de este archivo. Los otros cambios listados abajo son preexistentes y no fueron alterados por `AGENT-EXECUTOR`.
+
+### 11.1 Inventario literal del conjunto observado
+
+Comando: `git status --short`
+
+```text
+ M AGENTS.md
+ M config/systemd/magi-kiosk.service
+ M src/hmi_ui/magi_server.py
+ M src/hmi_ui/static/js/keyboard.js
+ M src/hmi_ui/static/js/magi.js
+ M src/hmi_ui/static/js/network.js
+?? config/labwc/autostart
+```
+
+Cambios observados, sin atribuirles todavía éxito operativo:
+
+- `AGENTS.md`: agrega la matriz formal MAGI, aislamiento de roles, formato de dictamen, tratamiento de vetos y algoritmo Golden Path. Esta entrada satisface el registro correlacionado exigido por la nueva regla de gobernanza.
+- `config/systemd/magi-kiosk.service`: cambia `ExecStart` para que systemd inicie únicamente `/usr/bin/labwc`; el arranque de Chromium se delega al autostart de labwc.
+- `config/labwc/autostart`: archivo nuevo que inicia una única instancia de Chromium kiosk e incorpora permisos de captura de cámara/micrófono para el origen local inseguro explícitamente permitido.
+- `src/hmi_ui/magi_server.py`: incorpora ejecución acotada con evidencia de `agy`, resumen separado para TTS, parsing y operaciones verificadas de Wi-Fi/Bluetooth, y gestión restringida del OSK local.
+- `src/hmi_ui/static/js/keyboard.js`: enlaza el foco/tacto de la terminal con el endpoint de visibilidad del OSK y maneja fallos explícitos.
+- `src/hmi_ui/static/js/magi.js`: implementa reconocimiento continuo con pausa/reanudación, presenta `stdout`/`stderr`/códigos reales, evita consenso fabricado ante fallos y limita TTS al resumen del backend.
+- `src/hmi_ui/static/js/network.js`: agrega timeouts/cancelación de escaneos, manejo explícito de errores y acciones Bluetooth de pair/trust/connect/disconnect con verificación del backend.
+- No aparece ningún archivo bajo `src/rt_core`, `hardware/` ni otro componente identificado como Core 3; la restricción de no modificar el motor RT se mantiene en el diff observado.
+
+### 11.2 Rectificación explícita de afirmaciones históricas de Fase 9
+
+Las filas históricas se preservan, pero las siguientes afirmaciones quedan formalmente rectificadas:
+
+- **MediaRecorder / STT:** `NO SUSTENTADA` y por tanto `RECHAZADA` como certificación operativa. La presencia de Web Speech API o MediaRecorder en código no demuestra permiso real de micrófono, captura continua ni puntuación en Chromium kiosk.
+- **Bluetooth funcional:** `NO SUSTENTADA` y por tanto `RECHAZADA` como certificación operativa. La UI y endpoints previos no prueban descubrimiento BlueZ real, pairing, trust ni conexión con un dispositivo físico.
+- **TTS y AntiGravity exitosos:** `NO SUSTENTADA` y por tanto `RECHAZADA` como certificación operativa. La existencia de endpoints no prueba una instancia viva de `agy`, un resumen LLM válido ni reproducción audible natural en hardware.
+- **OSK en terminal:** `NO SUSTENTADA` y por tanto `RECHAZADA` como certificación operativa. La existencia de `keyboard.js` no prueba que `wvkbd-mobintl` emerja al tocar el iframe de ttyd ni que el foco Wayland funcione en el panel físico.
+- La afirmación visual «CONSENSO ALCANZADO» de Fase 9 no constituye deliberación MAGI ni evidencia de tres dictámenes independientes.
+
+### 11.3 Validaciones locales — outputs literales completos
+
+Comando: `python -m py_compile src/hmi_ui/magi_server.py`
+
+Resultado: `PASS`, código de salida `0`.
+
+```text
+[sin salida]
+```
+
+Comando: `node --check src/hmi_ui/static/js/keyboard.js`
+
+Resultado: `PASS`, código de salida `0`.
+
+```text
+[sin salida]
+```
+
+Comando: `node --check src/hmi_ui/static/js/magi.js`
+
+Resultado: `PASS`, código de salida `0`.
+
+```text
+[sin salida]
+```
+
+Comando: `node --check src/hmi_ui/static/js/network.js`
+
+Resultado: `PASS`, código de salida `0`.
+
+```text
+[sin salida]
+```
+
+Comando: `bash -n config/labwc/autostart`
+
+Resultado: `PASS`, código de salida `0`.
+
+```text
+[sin salida]
+```
+
+Comando: `git diff --check`
+
+Resultado: `PASS`, código de salida `0`; solo se emitieron advertencias de normalización futura LF→CRLF.
+
+```text
+warning: in the working copy of 'AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'config/systemd/magi-kiosk.service', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hmi_ui/magi_server.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hmi_ui/static/js/keyboard.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hmi_ui/static/js/magi.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hmi_ui/static/js/network.js', LF will be replaced by CRLF the next time Git touches it
+```
+
+### 11.4 Verificación obligatoria del stack — fallo local esperado
+
+Comando: `bash scripts/verify-input-stack.sh`
+
+Resultado: `FAIL`, código de salida `1`. El host local Windows/WSL no contiene las unidades systemd del target; este fallo no demuestra un defecto ni un éxito en Raspberry Pi.
+
+```text
+========================================================================
+>>> [1/5] VERIFICANDO SERVICIOS SYSTEMD ACTIVOS...
+========================================================================
+  [ERROR] seatd: INACTIVO / FALLIDO
+Unit seatd.service could not be found.
+```
+
+### 11.5 Revisión de secretos, alcance RT y limitaciones
+
+La búsqueda estática del diff encontró únicamente los identificadores funcionales `password` de la API Wi-Fi; no encontró llaves privadas, tokens, secretos literales ni credenciales embebidas. La revisión completa del diff no mostró cambios en Core 3. Esto es una inspección estática local, no una certificación de seguridad exhaustiva.
+
+**PENDIENTE hardware/remoto:** ejecutar `python scripts/automation/deploy_magi_remote.py` o `bash scripts/verify-input-stack.sh` en el target y conservar output completo; verificar `seatd`, `magi-ui` y `magi-kiosk` como `active (running)`; comprobar `WLR_BACKENDS=drm,libinput` en `/proc/$PID/environ`; revisar journal sin errores fatales de libinput; probar físicamente Wi-Fi, descubrimiento/pair/trust/connect Bluetooth, micrófono/STT, ejecución viva de AntiGravity, resumen TTS audible y aparición del OSK al tocar ttyd. Hasta completar esas pruebas, los hitos permanecen `SIN EVIDENCIA SUFICIENTE`.
+
+**Recomendación de commit local:** el conjunto supera las validaciones sintácticas y de whitespace solicitadas y no toca Core 3, por lo que está listo para revisión/commit local condicionado. No está listo para despliegue ni para etiquetarse como operativo. No se creó commit en esta iteración.
+

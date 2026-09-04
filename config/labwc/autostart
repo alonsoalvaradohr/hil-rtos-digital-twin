@@ -1,0 +1,27 @@
+#!/bin/sh
+# MAGI kiosk has one launch owner: systemd must start only labwc, never Chromium
+# directly, otherwise this autostart command would create a duplicate kiosk.
+/usr/bin/chromium-browser \
+    --no-sandbox \
+    --disable-setuid-sandbox \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --no-first-run \
+    --no-default-browser-check \
+    --disable-session-crashed-bubble \
+    --disable-extensions \
+    --disable-background-networking \
+    --disable-sync \
+    --disable-translate \
+    --metrics-recording-only \
+    --no-service-autorun \
+    --remote-debugging-port=9222 \
+    --ozone-platform=wayland \
+    --enable-features=UseOzonePlatform,WaylandWindowDecorations,TouchTextSelection \
+    --touch-events=enabled \
+    --disable-pinch \
+    --user-data-dir=/tmp/chromium_magi_profile \
+    --auto-accept-camera-and-microphone-capture \
+    --unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080 \
+    http://127.0.0.1:8080/ &

@@ -12,6 +12,11 @@ import subprocess
 import time
 import struct
 import mmap
+import re
+import ipaddress
+import signal
+import threading
+from urllib.parse import urlsplit
 from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -21,6 +26,238 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # Constantes de Memoria Compartida
 SHM_PATH = "/dev/shm/hil_shm"
 HIL_SHM_MAGIC = 0x48494C5F53484D32
+
+AGY_TIMEOUT_SECONDS = float(os.environ.get("MAGI_AGY_TIMEOUT_SECONDS", "45"))
+AGY_SUMMARY_TIMEOUT_SECONDS = float(os.environ.get("MAGI_AGY_SUMMARY_TIMEOUT_SECONDS", "20"))
+NETWORK_TIMEOUT_SECONDS = float(os.environ.get("MAGI_NETWORK_TIMEOUT_SECONDS", "15"))
+BLUETOOTH_TIMEOUT_SECONDS = float(os.environ.get("MAGI_BLUETOOTH_TIMEOUT_SECONDS", "20"))
+BLUETOOTH_MAC_RE = re.compile(r"^(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
+OSK_EXECUTABLE = "/usr/bin/wvkbd-mobintl"
+OSK_ENVIRONMENT = {"XDG_RUNTIME_DIR": "/run/user/1000", "WAYLAND_DISPLAY": "wayland-0"}
+OSK_ALLOWED_ORIGINS = {"http://127.0.0.1:8080", "http://localhost:8080"}
+_osk_lock = threading.Lock()
+_osk_process = None
+_osk_pid = None
+
+
+def _command_result(command, timeout, env=None, input_text=None):
+    """Ejecuta un comando acotado y conserva evidencia literal del resultado."""
+    started = time.monotonic()
+    try:
+        completed = subprocess.run(
+            command, capture_output=True, text=True, timeout=timeout, env=env,
+            input=input_text
+        )
+        return {
+            "returncode": completed.returncode,
+            "stdout": completed.stdout.strip(),
+            "stderr": completed.stderr.strip(),
+            "duration_ms": round((time.monotonic() - started) * 1000, 1),
+            "timed_out": False,
+        }
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        stderr = exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        return {
+            "returncode": None, "stdout": stdout.strip(),
+            "stderr": stderr.strip(),
+            "duration_ms": round((time.monotonic() - started) * 1000, 1),
+            "timed_out": True,
+        }
+    except OSError as exc:
+        return {
+            "returncode": None, "stdout": "", "stderr": str(exc),
+            "duration_ms": round((time.monotonic() - started) * 1000, 1),
+            "timed_out": False,
+        }
+
+
+def _failure_summary(result):
+    if result["timed_out"]:
+        return "La solicitud no finalizo dentro del tiempo permitido. No se asumio ningun resultado."
+    detail = result["stderr"] or result["stdout"] or "sin salida de diagnostico"
+    return f"La ejecucion fallo (codigo {result['returncode']}): {detail}"
+
+
+def _agy_environment():
+    env = os.environ.copy()
+    env["PATH"] = "[HOME_REDACTED]" + env.get("PATH", "")
+    return env
+
+
+def _summarize_for_tts(prompt, primary_result):
+    """Solicita solo un resumen textual; la segunda llamada no recibe autoridad operativa."""
+    evidence = primary_result["stdout"] if primary_result["returncode"] == 0 else _failure_summary(primary_result)
+    summary_prompt = (
+        "TAREA ESTRICTAMENTE NO OPERATIVA: resume en espanol para lectura TTS la evidencia "
+        "incluida abajo. No ejecutes comandos, no uses herramientas, no declares exito si la "
+        "evidencia indica fallo. Responde solamente con 1 a 3 frases factuales.\n"
+        f"Solicitud original: {prompt}\nEvidencia: {evidence[:12000]}"
+    )
+    result = _command_result(
+        ["taskset", "-c", "1", "agy", "-p", summary_prompt],
+        AGY_SUMMARY_TIMEOUT_SECONDS, env=_agy_environment()
+    )
+    if result["returncode"] == 0 and result["stdout"]:
+        return result["stdout"], result
+    fallback = ("La operacion termino correctamente. " + primary_result["stdout"][:500]) \
+        if primary_result["returncode"] == 0 else _failure_summary(primary_result)
+    return fallback, result
+
+
+def _split_nmcli_line(line):
+    """Divide salida terse escapada de nmcli sin romper ':' o '\\' del SSID."""
+    fields, current, escaped = [], [], False
+    for char in line:
+        if escaped:
+            current.append(char)
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif char == ":":
+            fields.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    if escaped:
+        current.append("\\")
+    fields.append("".join(current))
+    return fields
+
+
+def _bluetoothctl(*commands, timeout=BLUETOOTH_TIMEOUT_SECONDS):
+    script = "\n".join(commands) + "\nquit\n"
+    return _command_result(["bluetoothctl"], timeout, input_text=script)
+
+
+def _bluetooth_info(mac):
+    result = _command_result(["bluetoothctl", "info", mac], BLUETOOTH_TIMEOUT_SECONDS)
+    properties = {}
+    if result["returncode"] == 0:
+        for line in result["stdout"].splitlines():
+            if ":" in line:
+                key, value = line.strip().split(":", 1)
+                properties[key.lower()] = value.strip()
+    return result, properties
+
+
+def _request_is_local(remote_addr, origin):
+    """Acepta únicamente clientes loopback y, cuando existe, un Origin kiosk exacto."""
+    try:
+        if not ipaddress.ip_address(remote_addr or "").is_loopback:
+            return False
+    except ValueError:
+        return False
+    if not origin:
+        return True
+    parsed = urlsplit(origin)
+    normalized = f"{parsed.scheme}://{parsed.netloc}"
+    return parsed.path in {"", "/"} and not parsed.query and not parsed.fragment and normalized in OSK_ALLOWED_ORIGINS
+
+
+def _pid_is_osk(pid):
+    """Verifica PID, ejecutable exacto y propietario antes de administrarlo."""
+    if not isinstance(pid, int) or pid <= 1:
+        return False
+    try:
+        proc_dir = f"/proc/{pid}"
+        return os.stat(proc_dir).st_uid == os.geteuid() and os.path.realpath(f"{proc_dir}/exe") == OSK_EXECUTABLE
+    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+        return False
+
+
+def _find_existing_osk():
+    try:
+        entries = os.scandir("/proc")
+    except OSError:
+        return None
+    with entries:
+        for entry in entries:
+            if entry.name.isdigit() and _pid_is_osk(int(entry.name)):
+                return int(entry.name)
+    return None
+
+
+def _current_osk_pid():
+    global _osk_process, _osk_pid
+    if _osk_process is not None:
+        if _osk_process.poll() is None and _pid_is_osk(_osk_process.pid):
+            _osk_pid = _osk_process.pid
+            return _osk_pid
+        _osk_process = None
+        _osk_pid = None
+    if _osk_pid is not None and _pid_is_osk(_osk_pid):
+        return _osk_pid
+    _osk_pid = _find_existing_osk()
+    return _osk_pid
+
+
+def _show_osk():
+    global _osk_process, _osk_pid
+    existing_pid = _current_osk_pid()
+    if existing_pid is not None:
+        return {"success": True, "running": True, "pid": existing_pid, "already_running": True}
+    if not os.path.isfile(OSK_EXECUTABLE) or not os.access(OSK_EXECUTABLE, os.X_OK):
+        return {"success": False, "running": False, "pid": None,
+                "error": f"Ejecutable OSK no disponible: {OSK_EXECUTABLE}"}
+    env = os.environ.copy()
+    env.update(OSK_ENVIRONMENT)
+    try:
+        process = subprocess.Popen(
+            [OSK_EXECUTABLE], env=env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+            start_new_session=True
+        )
+        time.sleep(0.1)
+        returncode = process.poll()
+        if returncode is not None:
+            stderr = process.stderr.read().strip() if process.stderr else ""
+            return {"success": False, "running": False, "pid": process.pid,
+                    "returncode": returncode, "error": stderr or "wvkbd finalizo al iniciar"}
+        if not _pid_is_osk(process.pid):
+            process.terminate()
+            return {"success": False, "running": False, "pid": process.pid,
+                    "error": "El PID iniciado no corresponde al ejecutable OSK esperado"}
+        _osk_process = process
+        _osk_pid = process.pid
+        return {"success": True, "running": True, "pid": process.pid, "already_running": False}
+    except OSError as exc:
+        return {"success": False, "running": False, "pid": None, "error": str(exc)}
+
+
+def _hide_osk(timeout=2.0):
+    global _osk_process, _osk_pid
+    pid = _current_osk_pid()
+    if pid is None:
+        return {"success": True, "running": False, "pid": None, "already_stopped": True}
+    try:
+        if _osk_process is not None and _osk_process.pid == pid:
+            _osk_process.terminate()
+            try:
+                returncode = _osk_process.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                _osk_process.kill()
+                returncode = _osk_process.wait(timeout=timeout)
+        else:
+            os.kill(pid, signal.SIGTERM)
+            deadline = time.monotonic() + timeout
+            while _pid_is_osk(pid) and time.monotonic() < deadline:
+                time.sleep(0.05)
+            if _pid_is_osk(pid):
+                os.kill(pid, signal.SIGKILL)
+                deadline = time.monotonic() + timeout
+                while _pid_is_osk(pid) and time.monotonic() < deadline:
+                    time.sleep(0.05)
+            returncode = None
+        still_running = _pid_is_osk(pid)
+        _osk_process = None
+        _osk_pid = pid if still_running else None
+        if still_running:
+            return {"success": False, "running": True, "pid": pid, "returncode": returncode,
+                    "error": "wvkbd continua activo despues de terminate/kill"}
+        return {"success": True, "running": False, "pid": pid, "returncode": returncode}
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"success": False, "running": _pid_is_osk(pid), "pid": pid, "error": str(exc)}
 
 def get_system_status():
     status = {
@@ -76,49 +313,6 @@ def get_system_status():
 
     return status
 
-def generate_magi_deliberation_response(prompt, exec_time, raw_cli_out=""):
-    output_lines = []
-    output_lines.append("================================================================")
-    output_lines.append("MAGI SYSTEM // BALTHASAR • 2 - AUTONOMOUS REASONING CORE 1")
-    output_lines.append("================================================================")
-    output_lines.append(f"DIRECTIVE : \"{prompt}\"")
-    output_lines.append("ISOLATION : TASKSET CPU AFFINITY = 1 (RT CORES 2 & 3 UNTOUCHED)")
-    output_lines.append("CONSENSUS : MELCHIOR-1 (AGREED) | BALTHASAR-2 (AGREED) | CASPER-3 (AGREED)\n")
-
-    lower_prompt = prompt.lower()
-    if "latencia" in lower_prompt or "jitter" in lower_prompt or "rt" in lower_prompt:
-        output_lines.append("[+] AUDITORIA DETERMINISTA DE SILICIO (PREEMPT_RT):")
-        output_lines.append("  • Task Scheduler : SCHED_FIFO Prio 99 (Core 3)")
-        output_lines.append("  • Control Loop   : 1000.0 Hz (1000 us exact)")
-        output_lines.append("  • Jitter Medido  : < 12.0 us (Jitter max historico: 8.4 us)")
-        output_lines.append("  • Aislamiento RT : isolcpus=2,3 nohz_full=2,3 rcu_nocbs=2,3")
-    elif "shm" in lower_prompt or "memoria" in lower_prompt or "queue" in lower_prompt:
-        output_lines.append("[+] ESTADO DEL SUBSISTEMA DE MEMORIA COMPARTIDA (SHM):")
-        output_lines.append(f"  • Nodo SHM       : {'/dev/shm/hil_shm [ACTIVE]' if os.path.exists(SHM_PATH) else '/dev/shm/hil_shm [STANDBY]'}")
-        output_lines.append("  • LockFree Queue : 64-byte aligned (Cache-line padded)")
-        output_lines.append("  • Buffer Drops   : 0 paquetes (Cero descartes)")
-        output_lines.append("  • Latencia SHM   : < 150 ns (Zero-copy IPC)")
-    elif "afin" in lower_prompt or "core" in lower_prompt or "cpu" in lower_prompt:
-        output_lines.append("[+] TOPOLOGIA Y AISLAMIENTO DE CORES:")
-        output_lines.append("  • Core 0 : OS Daemons, SSH, Background Tasks")
-        output_lines.append("  • Core 1 : MAGI HMI, Chromium Kiosk, Voice Audio, AntiGravity CLI")
-        output_lines.append("  • Core 2 : Aislado de interrupciones (RT Reserve)")
-        output_lines.append("  • Core 3 : Lazo Cerrado de Control Motor RT (rt_motor)")
-    elif "red" in lower_prompt or "wifi" in lower_prompt or "net" in lower_prompt or "telemetria" in lower_prompt:
-        output_lines.append("[+] TELEMETRIA DE COMUNICACIONES Y RED:")
-        output_lines.append("  • Enlace Fisico  : eth0 Direct Link (fe80::4b3c:e19:bb19:445a / 192.168.4.2)")
-        output_lines.append("  • Puertos HMI    : 8080 (MAGI HMI Server), 7681 (ttyd Terminal CLI)")
-        output_lines.append("  • Broker MQTT    : 1883 (mosquitto - hil/command, hil/telemetry)")
-    else:
-        if raw_cli_out and "authentication required" not in raw_cli_out:
-            output_lines.append(f"[+] CLI OUTPUT:\n{raw_cli_out}")
-        else:
-            output_lines.append("[+] RESULTADO: Directiva analizada y procesada bajo consenso tripartito MAGI.")
-            output_lines.append("  • Estado: Sistema determinista 100% operativo sin degradacion.")
-
-    output_lines.append("\n[OK] CONSENSO TRIPARTITO ALCANZADO (3/3 PODS // 100% SUCESS).")
-    return "\n".join(output_lines)
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -138,43 +332,33 @@ def api_magi_prompt():
     if not prompt:
         return jsonify({"success": False, "error": "Prompt vacio"}), 400
 
-    start_time = time.time()
     print(f"[+] MAGI PROMPT RECEIVED (Core 1): {prompt}")
-
-    try:
-        cmd = ["taskset", "-c", "1", "agy", "-p", prompt, "--print-timeout", "2s"]
-        env = os.environ.copy()
-        env["PATH"] = "[HOME_REDACTED]" + env.get("PATH", "")
-
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=3, env=env)
-        exec_time = round((time.time() - start_time) * 1000, 1)
-
-        if proc.returncode == 0 and proc.stdout.strip():
-            return jsonify({
-                "success": True,
-                "output": proc.stdout.strip(),
-                "execution_time_ms": exec_time,
-                "core": "Core 1"
-            })
-        else:
-            raw = proc.stdout.strip() or proc.stderr.strip()
-            delib = generate_magi_deliberation_response(prompt, exec_time, raw)
-            return jsonify({
-                "success": True,
-                "output": delib,
-                "execution_time_ms": exec_time,
-                "core": "Core 1"
-            })
-
-    except Exception:
-        exec_time = round((time.time() - start_time) * 1000, 1)
-        delib = generate_magi_deliberation_response(prompt, exec_time, "")
-        return jsonify({
-            "success": True,
-            "output": delib,
-            "execution_time_ms": exec_time,
-            "core": "Core 1"
-        })
+    primary = _command_result(
+        ["taskset", "-c", "1", "agy", "-p", prompt],
+        AGY_TIMEOUT_SECONDS, env=_agy_environment()
+    )
+    summary, summary_result = _summarize_for_tts(prompt, primary)
+    success = primary["returncode"] == 0 and bool(primary["stdout"]) and not primary["timed_out"]
+    response = {
+        "success": success,
+        "output": primary["stdout"] if success else _failure_summary(primary),
+        "summary": summary,
+        "stdout": primary["stdout"],
+        "stderr": primary["stderr"],
+        "returncode": primary["returncode"],
+        "execution_time_ms": primary["duration_ms"],
+        "timed_out": primary["timed_out"],
+        "summary_call": {
+            "returncode": summary_result["returncode"],
+            "stderr": summary_result["stderr"],
+            "duration_ms": summary_result["duration_ms"],
+            "timed_out": summary_result["timed_out"],
+        },
+        "core": "Core 1",
+    }
+    if success:
+        return jsonify(response), 200
+    return jsonify(response), (504 if primary["timed_out"] else 502)
 
 @app.route("/api/audio/tts", methods=["POST"])
 def api_audio_tts():
@@ -210,17 +394,22 @@ def api_audio_tts():
 @app.route("/api/wifi/scan")
 def api_wifi_scan():
     networks = []
+    res = _command_result(
+        ["nmcli", "--terse", "--escape", "yes", "--fields", "SSID,SIGNAL,SECURITY,CHAN,RATE",
+         "device", "wifi", "list", "--rescan", "auto"],
+        NETWORK_TIMEOUT_SECONDS
+    )
+    if res["timed_out"]:
+        return jsonify({"success": False, "error": "nmcli scan timeout", "details": res, "networks": []}), 504
+    if res["returncode"] != 0:
+        return jsonify({"success": False, "error": res["stderr"] or res["stdout"], "details": res, "networks": []}), 502
     try:
-        res = subprocess.run(
-            ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY,CHAN", "dev", "wifi", "list"],
-            capture_output=True, text=True, timeout=6
-        )
         seen_ssids = set()
-        for line in res.stdout.strip().split("\n"):
+        for line in res["stdout"].splitlines():
             if not line:
                 continue
-            parts = line.split(":")
-            if len(parts) >= 4 and parts[0]:
+            parts = _split_nmcli_line(line)
+            if len(parts) == 5 and parts[0]:
                 ssid = parts[0]
                 if ssid not in seen_ssids:
                     seen_ssids.add(ssid)
@@ -229,11 +418,11 @@ def api_wifi_scan():
                         "signal": int(parts[1]) if parts[1].isdigit() else 0,
                         "security": parts[2] if parts[2] else "Open",
                         "channel": parts[3],
-                        "rate": "54 Mbit/s"
+                        "rate": parts[4]
                     })
         networks.sort(key=lambda x: x["signal"], reverse=True)
     except Exception as e:
-        return jsonify({"success": False, "error": str(e), "networks": []}), 500
+        return jsonify({"success": False, "error": f"Invalid nmcli output: {e}", "details": res, "networks": []}), 502
 
     return jsonify({"success": True, "networks": networks})
 
@@ -249,56 +438,109 @@ def api_wifi_connect():
     if not ssid:
         return jsonify({"success": False, "message": "SSID no especificado"}), 400
 
-    try:
-        cmd = ["sudo", "nmcli", "dev", "wifi", "connect", ssid]
-        if password:
-            cmd.extend(["password", password])
-
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-        if res.returncode == 0:
-            return jsonify({"success": True, "message": f"Conectado exitosamente a {ssid}", "output": res.stdout})
-        else:
-            return jsonify({"success": False, "message": f"Error de conexion: {res.stderr}", "output": res.stderr}), 400
-    except subprocess.TimeoutExpired:
-        return jsonify({"success": False, "message": "Tiempo de espera agotado al autenticar red"}), 504
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+    cmd = ["nmcli", "device", "wifi", "connect", ssid]
+    if password:
+        cmd.extend(["password", password])
+    res = _command_result(cmd, NETWORK_TIMEOUT_SECONDS)
+    if res["timed_out"]:
+        return jsonify({"success": False, "message": "Tiempo de espera agotado al autenticar red", "details": res}), 504
+    if res["returncode"] != 0:
+        return jsonify({"success": False, "message": res["stderr"] or res["stdout"], "details": res}), 502
+    return jsonify({"success": True, "message": f"Conectado a {ssid}", "output": res["stdout"], "details": res})
 
 @app.route("/api/wifi/disconnect", methods=["POST"])
 def api_wifi_disconnect():
-    try:
-        res = subprocess.run(["sudo", "nmcli", "dev", "disconnect", "wlan0"], 
-                             capture_output=True, text=True, timeout=5)
-        return jsonify({"success": True, "message": "Interfaz Wi-Fi desconectada"})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+    device = (request.get_json(silent=True) or {}).get("device", "wlan0")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", device):
+        return jsonify({"success": False, "message": "Interfaz Wi-Fi invalida"}), 400
+    res = _command_result(["nmcli", "device", "disconnect", device], NETWORK_TIMEOUT_SECONDS)
+    if res["timed_out"]:
+        return jsonify({"success": False, "message": "nmcli disconnect timeout", "details": res}), 504
+    if res["returncode"] != 0:
+        return jsonify({"success": False, "message": res["stderr"] or res["stdout"], "details": res}), 502
+    return jsonify({"success": True, "message": "Interfaz Wi-Fi desconectada", "details": res})
 
 @app.route("/api/bluetooth/scan")
 def api_bluetooth_scan():
+    power = _bluetoothctl("power on")
+    if power["returncode"] != 0 or power["timed_out"]:
+        return jsonify({"success": False, "error": power["stderr"] or power["stdout"] or "No se pudo activar Bluetooth", "details": power, "devices": []}), (504 if power["timed_out"] else 502)
+    discovery = _command_result(
+        ["bluetoothctl", "--timeout", str(max(1, int(BLUETOOTH_TIMEOUT_SECONDS))), "scan", "on"],
+        BLUETOOTH_TIMEOUT_SECONDS + 2
+    )
+    if discovery["timed_out"]:
+        return jsonify({"success": False, "error": "Bluetooth discovery timeout", "details": discovery, "devices": []}), 504
+    if discovery["returncode"] != 0:
+        return jsonify({"success": False, "error": discovery["stderr"] or discovery["stdout"], "details": discovery, "devices": []}), 502
+    listing = _command_result(["bluetoothctl", "devices"], BLUETOOTH_TIMEOUT_SECONDS)
+    if listing["returncode"] != 0 or listing["timed_out"]:
+        return jsonify({"success": False, "error": listing["stderr"] or listing["stdout"] or "No se pudieron listar dispositivos", "details": listing, "devices": []}), (504 if listing["timed_out"] else 502)
+    found = {}
+    for line in (discovery["stdout"] + "\n" + listing["stdout"]).splitlines():
+        match = re.search(r"(?:^|\s)Device\s+((?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2})(?:\s+(.*))?$", line)
+        if match:
+            found[match.group(1).upper()] = (match.group(2) or match.group(1)).strip()
     devices = []
-    try:
-        res = subprocess.run(["bluetoothctl", "devices"], capture_output=True, text=True, timeout=3)
-        paired_res = subprocess.run(["bluetoothctl", "paired-devices"], capture_output=True, text=True, timeout=3)
-        paired_macs = set()
-        for line in paired_res.stdout.strip().split("\n"):
-            parts = line.split()
-            if len(parts) >= 2 and parts[0] == "Device":
-                paired_macs.add(parts[1])
+    for mac, discovered_name in found.items():
+        info_result, properties = _bluetooth_info(mac)
+        devices.append({
+            "mac": mac,
+            "name": properties.get("name", properties.get("alias", discovered_name)),
+            "paired": properties.get("paired", "no").lower() == "yes",
+            "trusted": properties.get("trusted", "no").lower() == "yes",
+            "connected": properties.get("connected", "no").lower() == "yes",
+            "info_error": None if info_result["returncode"] == 0 else (info_result["stderr"] or info_result["stdout"]),
+        })
+    return jsonify({"success": True, "devices": devices, "details": {"discovery": discovery, "listing": listing}})
 
-        for line in res.stdout.strip().split("\n"):
-            parts = line.split(maxsplit=2)
-            if len(parts) >= 3 and parts[0] == "Device":
-                mac = parts[1]
-                name = parts[2]
-                devices.append({
-                    "mac": mac,
-                    "name": name,
-                    "paired": (mac in paired_macs)
-                })
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e), "devices": []})
 
-    return jsonify({"success": True, "devices": devices})
+@app.route("/api/bluetooth/<action>", methods=["POST"])
+def api_bluetooth_action(action):
+    if action not in {"pair", "trust", "connect", "disconnect"}:
+        return jsonify({"success": False, "error": "Accion Bluetooth no soportada"}), 404
+    data = request.get_json(silent=True) or {}
+    mac = str(data.get("mac", "")).upper()
+    if not BLUETOOTH_MAC_RE.fullmatch(mac):
+        return jsonify({"success": False, "error": "Direccion Bluetooth invalida"}), 400
+    result = _bluetoothctl("power on", f"{action} {mac}")
+    if result["timed_out"]:
+        return jsonify({"success": False, "error": f"Bluetooth {action} timeout", "details": result}), 504
+    info_result, properties = _bluetooth_info(mac)
+    expected_property = {"pair": "paired", "trust": "trusted", "connect": "connected", "disconnect": "connected"}[action]
+    expected_value = action != "disconnect"
+    observed_value = properties.get(expected_property, "no").lower() == "yes"
+    verified = info_result["returncode"] == 0 and observed_value == expected_value
+    success = result["returncode"] == 0 and verified
+    payload = {
+        "success": success, "action": action, "mac": mac, "verified": verified,
+        "state": {"paired": properties.get("paired"), "trusted": properties.get("trusted"),
+                  "connected": properties.get("connected")},
+        "details": result, "verification": info_result,
+    }
+    if success:
+        return jsonify(payload), 200
+    payload["error"] = result["stderr"] or result["stdout"] or info_result["stderr"] or "Estado Bluetooth no verificado"
+    return jsonify(payload), 502
+
+
+@app.route("/api/osk/<action>", methods=["GET", "POST"])
+def api_osk_action(action):
+    if action not in {"show", "hide", "status"}:
+        return jsonify({"success": False, "error": "Accion OSK no soportada"}), 404
+    if request.method == "GET" and action != "status":
+        return jsonify({"success": False, "error": "show/hide requieren POST"}), 405
+    if not _request_is_local(request.remote_addr, request.headers.get("Origin")):
+        return jsonify({"success": False, "error": "Solicitud OSK rechazada: origen no autorizado"}), 403
+    with _osk_lock:
+        if action == "show":
+            result = _show_osk()
+        elif action == "hide":
+            result = _hide_osk()
+        else:
+            pid = _current_osk_pid()
+            result = {"success": True, "running": pid is not None, "pid": pid}
+    return jsonify(result), (200 if result["success"] else 500)
 
 @app.route("/api/hil/command", methods=["POST"])
 def api_hil_command():

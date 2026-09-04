@@ -10,6 +10,10 @@ class MagiUI {
         this.activeAgentMode = "voice";
         this.isRecording = false;
         this.speechRecognition = null;
+        this.finalTranscript = "";
+        this.shouldRestartRecognition = false;
+        this.recognitionStarting = false;
+        this.microphoneAccessVerified = false;
         this.debateInterval = null;
         this.debateStartTime = 0;
         this.init();
@@ -204,6 +208,36 @@ class MagiUI {
         const statusText = document.getElementById("voice-status-text");
         const transcriptArea = document.getElementById("voice-transcript-output");
 
+        const setVoiceState = (message, state = "ready") => {
+            if (statusText) statusText.innerText = message;
+            if (btnPtt) btnPtt.classList.toggle("recording", state === "recording");
+            if (voiceDot) {
+                voiceDot.classList.toggle("recording", state === "recording");
+                voiceDot.classList.toggle("ready", state !== "recording");
+            }
+        };
+
+        const diagnoseMicrophone = async () => {
+            if (this.microphoneAccessVerified) return true;
+            if (!window.isSecureContext) {
+                setVoiceState("STT NO SEGURO: Chromium requiere HTTPS o localhost para habilitar microfono", "error");
+                return false;
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setVoiceState("STT NO DISPONIBLE: getUserMedia no existe en este navegador", "error");
+                return false;
+            }
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                this.microphoneAccessVerified = true;
+                return true;
+            } catch (error) {
+                setVoiceState(`ERROR DE MICROFONO: ${error.name}: ${error.message}`, "error");
+                return false;
+            }
+        };
+
         // Verificar soporte Web Speech API
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -214,68 +248,95 @@ class MagiUI {
 
             this.speechRecognition.onresult = (event) => {
                 let interimTranscript = "";
-                let finalTranscript = "";
 
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
+                        const fragment = event.results[i][0].transcript.trim();
+                        if (fragment) this.finalTranscript = `${this.finalTranscript} ${fragment}`.trim();
                     } else {
                         interimTranscript += event.results[i][0].transcript;
                     }
                 }
 
                 if (transcriptArea) {
-                    transcriptArea.value = finalTranscript || interimTranscript;
+                    transcriptArea.value = `${this.finalTranscript} ${interimTranscript}`.trim();
                 }
             };
 
             this.speechRecognition.onerror = (event) => {
                 console.warn("STT Error:", event.error);
-                if (statusText) statusText.innerText = "ERROR EN STT: " + event.error.toUpperCase();
+                this.recognitionStarting = false;
+                if (["not-allowed", "service-not-allowed", "audio-capture"].includes(event.error)) {
+                    this.shouldRestartRecognition = false;
+                    this.isRecording = false;
+                }
+                setVoiceState(`ERROR EN STT: ${event.error.toUpperCase()}${event.message ? `: ${event.message}` : ""}`, "error");
             };
+            this.speechRecognition.onstart = () => {
+                this.recognitionStarting = false;
+                this.isRecording = true;
+                setVoiceState("GRABACION CONTINUA ACTIVA // PAUSE PARA DETENER", "recording");
+            };
+            this.speechRecognition.onend = () => {
+                this.recognitionStarting = false;
+                this.isRecording = false;
+                if (this.shouldRestartRecognition) {
+                    window.setTimeout(() => startRecording(), 250);
+                } else {
+                    setVoiceState("STT PAUSADO // LISTO PARA REANUDAR O EJECUTAR", "ready");
+                }
+            };
+        } else {
+            setVoiceState("STT NO SOPORTADO POR ESTE NAVEGADOR", "error");
         }
 
-        const startRecording = (e) => {
+        const startRecording = async (e) => {
             if (e) e.preventDefault();
-            if (this.isRecording) return;
-            this.isRecording = true;
-
-            if (btnPtt) btnPtt.classList.add("recording");
-            if (voiceDot) {
-                voiceDot.classList.remove("ready");
-                voiceDot.classList.add("recording");
-            }
-            if (statusText) statusText.innerText = "RECORDING AUDIO // DICTATE YOUR PROMPT DIRECTIVE...";
-
-            if (this.speechRecognition) {
-                try { this.speechRecognition.start(); } catch (err) { /* already started */ }
+            if (!this.speechRecognition || this.isRecording || this.recognitionStarting) return;
+            if (!(await diagnoseMicrophone())) return;
+            this.shouldRestartRecognition = true;
+            this.recognitionStarting = true;
+            setVoiceState("INICIANDO MICROFONO...", "recording");
+            try {
+                this.speechRecognition.start();
+            } catch (error) {
+                this.recognitionStarting = false;
+                this.shouldRestartRecognition = false;
+                setVoiceState(`NO SE PUDO INICIAR STT: ${error.name}: ${error.message}`, "error");
             }
         };
 
         const stopRecording = (e) => {
             if (e) e.preventDefault();
-            if (!this.isRecording) return;
-            this.isRecording = false;
-
-            if (btnPtt) btnPtt.classList.remove("recording");
-            if (voiceDot) {
-                voiceDot.classList.remove("recording");
-                voiceDot.classList.add("ready");
-            }
-            if (statusText) statusText.innerText = "RECORDING COMPLETED // READY TO EXECUTE PROMPT";
-
-            if (this.speechRecognition) {
-                try { this.speechRecognition.stop(); } catch (err) { /* already stopped */ }
+            this.shouldRestartRecognition = false;
+            if (!this.speechRecognition || (!this.isRecording && !this.recognitionStarting)) return;
+            try { this.speechRecognition.stop(); } catch (error) {
+                setVoiceState(`NO SE PUDO PAUSAR STT: ${error.name}: ${error.message}`, "error");
             }
         };
 
         if (btnPtt) {
-            // Soporte Touch y Mouse
-            btnPtt.addEventListener("pointerdown", startRecording);
-            btnPtt.addEventListener("pointerup", stopRecording);
-            btnPtt.addEventListener("pointerleave", stopRecording);
-            btnPtt.addEventListener("touchstart", startRecording, { passive: false });
-            btnPtt.addEventListener("touchend", stopRecording, { passive: false });
+            // Toque alterna grabacion continua; salir del boton no interrumpe el dictado.
+            btnPtt.addEventListener("click", (event) => {
+                if (this.isRecording || this.recognitionStarting) stopRecording(event);
+                else startRecording(event);
+            });
+
+            const controls = document.createElement("div");
+            controls.className = "voice-stt-controls";
+            controls.style.cssText = "display:flex; gap:8px; margin-top:8px;";
+            const pauseButton = document.createElement("button");
+            pauseButton.type = "button";
+            pauseButton.className = "eva-btn-action";
+            pauseButton.textContent = "PAUSAR";
+            pauseButton.addEventListener("click", stopRecording);
+            const resumeButton = document.createElement("button");
+            resumeButton.type = "button";
+            resumeButton.className = "eva-btn-action";
+            resumeButton.textContent = "REANUDAR";
+            resumeButton.addEventListener("click", startRecording);
+            controls.append(pauseButton, resumeButton);
+            btnPtt.insertAdjacentElement("afterend", controls);
         }
     }
 
@@ -285,7 +346,7 @@ class MagiUI {
     speakMagi(text) {
         if (!text) return;
 
-        // 1. Client-Side Chromium Web Speech Synthesis
+        // Una sola ruta de audio: navegador si existe, backend solo como fallback.
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel(); // Detener locución previa
 
@@ -300,9 +361,10 @@ class MagiUI {
             if (esVoice) utterance.voice = esVoice;
 
             window.speechSynthesis.speak(utterance);
+            return;
         }
 
-        // 2. Servidor Backend Core 1 (aplay / espeak-ng) para salida de hardware simultánea
+        // Servidor Backend Core 1 (aplay / espeak-ng) cuando Chromium no sintetiza.
         try {
             fetch("/api/audio/tts", {
                 method: "POST",
@@ -322,6 +384,11 @@ class MagiUI {
         if (!cleanPrompt) {
             alert("Por favor ingrese o dicte una instrucción antes de ejecutar.");
             return;
+        }
+
+        this.shouldRestartRecognition = false;
+        if (this.speechRecognition && (this.isRecording || this.recognitionStarting)) {
+            try { this.speechRecognition.stop(); } catch (error) { console.warn("STT stop before dispatch:", error); }
         }
 
         // Actualizar consolas
@@ -347,8 +414,28 @@ class MagiUI {
                 body: JSON.stringify({ prompt: cleanPrompt })
             });
 
-            const data = await res.json();
-            const outputText = data.output || (data.success ? "Comando ejecutado con exito." : ("Error: " + data.error));
+            let data;
+            try {
+                data = await res.json();
+            } catch (error) {
+                throw new Error(`HTTP ${res.status}: respuesta JSON invalida`);
+            }
+            const evidence = [];
+            if (data.stdout) evidence.push(`[STDOUT]\n${data.stdout}`);
+            if (data.stderr) evidence.push(`[STDERR]\n${data.stderr}`);
+            if (data.error) evidence.push(`[ERROR]\n${data.error}`);
+            if (!evidence.length && data.output) evidence.push(data.output);
+            const outputText = evidence.join("\n\n") || `HTTP ${res.status}: respuesta sin evidencia`;
+
+            if (!res.ok || data.success !== true) {
+                const failure = `EJECUCION FALLIDA // HTTP ${res.status} // RC ${data.returncode ?? "NO DISPONIBLE"}${data.timed_out ? " // TIMEOUT" : ""}\n${outputText}`;
+                if (consoleVoice) consoleVoice.innerText = msgHeader + "\n[-] " + failure;
+                if (consoleText) consoleText.innerText = msgHeader + "\n[-] " + failure;
+                if (stateVoice) { stateVoice.className = "exec-state-idle"; stateVoice.innerText = "FAILED"; }
+                if (stateText) { stateText.className = "exec-state-idle"; stateText.innerText = "FAILED"; }
+                this.finishMagiDebate(failure, false, data.summary || outputText);
+                return;
+            }
 
             if (consoleVoice) consoleVoice.innerText = msgHeader + "\n[✓] RESPONSE RECEIVED:\n" + outputText;
             if (consoleText) consoleText.innerText = msgHeader + "\n[✓] RESPONSE RECEIVED:\n" + outputText;
@@ -357,7 +444,7 @@ class MagiUI {
             if (stateText) { stateText.className = "exec-state-done"; stateText.innerText = "CONSENSUS REACHED"; }
 
             // Concluir Debate MAGI
-            this.finishMagiDebate(outputText, data.success);
+            this.finishMagiDebate(outputText, true, data.summary || outputText);
 
         } catch (e) {
             const errMsg = "Error de enlace con el agente AntiGravity: " + e.message;
@@ -367,7 +454,7 @@ class MagiUI {
             if (stateVoice) { stateVoice.className = "exec-state-idle"; stateVoice.innerText = "FAILED"; }
             if (stateText) { stateText.className = "exec-state-idle"; stateText.innerText = "FAILED"; }
 
-            this.finishMagiDebate(errMsg, false);
+            this.finishMagiDebate(errMsg, false, errMsg);
         }
     }
 
@@ -441,7 +528,7 @@ class MagiUI {
     /**
      * Finish MAGI Debate & Announce Tripartite Consensus
      */
-    finishMagiDebate(resultText, isSuccess) {
+    finishMagiDebate(resultText, isSuccess, ttsSummary = "") {
         if (this.debateInterval) {
             clearInterval(this.debateInterval);
             this.debateInterval = null;
@@ -454,19 +541,19 @@ class MagiUI {
 
         if (bar) bar.style.width = "100%";
         if (titleEl) {
-            titleEl.innerText = isSuccess ? "CONSENSO ALCANZADO" : "CONSENSO CONDICIONAL";
-            titleEl.style.color = isSuccess ? "var(--magi-green)" : "var(--magi-orange)";
+            titleEl.innerText = isSuccess ? "EJECUCION COMPLETADA" : "EJECUCION FALLIDA";
+            titleEl.style.color = isSuccess ? "var(--magi-green)" : "var(--magi-red)";
         }
         if (verdictEl) {
-            verdictEl.innerText = isSuccess ? "DECISION APROBADA (3/3 PODS // 100% ACUERDO)" : "EJECUCION FINALIZADA CON AVISOS";
+            verdictEl.innerText = isSuccess ? "ANTIGRAVITY DEVOLVIO EXITO VERIFICABLE" : resultText.slice(0, 240);
         }
 
-        // Pods a estado de consenso verde
+        // Pods reflejan finalizacion; un fallo nunca se presenta como consenso verde.
         ["pod-balthasar", "pod-casper", "pod-melchior"].forEach(id => {
             const podEl = document.getElementById(id);
             if (podEl) {
                 podEl.classList.remove("debating");
-                podEl.classList.add("consensus");
+                if (isSuccess) podEl.classList.add("consensus");
             }
         });
 
@@ -474,12 +561,12 @@ class MagiUI {
         const bBalthasar = document.getElementById("pod-status-balthasar");
         const bCasper = document.getElementById("pod-status-casper");
 
-        if (bMelchior) bMelchior.innerText = "AGREED // 100%";
-        if (bBalthasar) bBalthasar.innerText = "CONSENSUS // 100%";
-        if (bCasper) bCasper.innerText = "VERIFIED // 100%";
+        if (bMelchior) bMelchior.innerText = isSuccess ? "COMPLETED" : "FAILED";
+        if (bBalthasar) bBalthasar.innerText = isSuccess ? "COMPLETED" : "FAILED";
+        if (bCasper) bCasper.innerText = isSuccess ? "VERIFIED" : "NOT VERIFIED";
 
-        // Locución auditiva de conclusión
-        this.speakMagi("MAGI SYSTEM. CONSENSO ALCANZADO. TAREA COMPLETADA.");
+        // La locucion usa exclusivamente el resumen natural retornado por el backend.
+        if (ttsSummary) this.speakMagi(ttsSummary);
 
         // Restaurar estado visual tras 6 segundos
         setTimeout(() => {
