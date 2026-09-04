@@ -176,3 +176,96 @@ La búsqueda estática del diff encontró únicamente los identificadores funcio
 
 **Recomendación de commit local:** el conjunto supera las validaciones sintácticas y de whitespace solicitadas y no toca Core 3, por lo que está listo para revisión/commit local condicionado. No está listo para despliegue ni para etiquetarse como operativo. No se creó commit en esta iteración.
 
+---
+
+## Fase 11 — Reauditoría hostil y pivote posterior a `3deae82`
+
+**Fecha:** 2026-09-04
+
+**Operador/agente de registro:** `AGENT-EXECUTOR`
+
+**Alcance atómico:** esta iteración modifica únicamente `COMMAND_EXECUTION_AUDIT.md`. Las correcciones funcionales descritas son cambios actuales preexistentes en el worktree, producidos fuera de esta iteración documental. No se hizo commit, push, deploy ni restart.
+
+**Dictamen sobre `3deae82`:** `RECHAZADO / PIVOT` como candidato de despliegue. El commit conserva valor histórico, pero no satisface la gobernanza MAGI ni la certificación hardware.
+
+### 11.6 Hallazgos que motivan el rechazo/pivote
+
+- La ejecución de `agy` del commit no demostraba tres dictámenes independientes ni validaba estructura, evidencia concreta, vetos y Golden Path antes de ejecutar la directiva.
+- Una salida superficial con `POSICION` podía confundirse con dictamen válido; faltaban gates estrictos para impedir ejecución ante evidencia insuficiente.
+- El frontend todavía podía convertir éxito técnico parcial en consenso visual y no preservaba de forma inequívoca el `rc`/`stderr` del ejecutor.
+- Bluetooth dependía de una transacción insuficiente para desafíos de autorización, PIN/passkey y confirmación; no debía autoaceptar solicitudes de BlueZ.
+- Wi-Fi no separaba rigurosamente enlace activo, UUID real y persistencia `connection.autoconnect`; tampoco ofrecía reconexión verificable del perfil conocido prioritario.
+- STT no tenía pruebas de temporizador de pausa, puntuación idempotente y cancelación de reinicio al ejecutar.
+- El verificador anterior fallaba temprano, no agregaba todos los hallazgos ni distinguía preflight estático de certificación física/voz.
+- El deployer anterior conectaba y mutaba el target directamente, mezclaba componentes, aceptaba host keys nuevas e instalaba dependencias; no era un flujo atómico, reproducible ni dry-run por defecto.
+
+### 11.7 Correcciones actuales observadas por archivo
+
+- `scripts/automation/deploy_magi_remote.py`: reescrito como deployer atómico con `DRY-RUN` por defecto, selección explícita de componente, fuentes canónicas, rechazo de host key desconocida, staging remoto, comparación SHA-256, backup previo y mutación únicamente con `--apply`. La autorización humana para desplegar sigue siendo obligatoria.
+- `scripts/verify-input-stack.sh`: incorpora modos `--preflight`, `--certify` y `--certify-voice`; conserva outputs y códigos literales, acumula fallos, exige un único `labwc`, entorno exacto `WLR_BACKENDS=drm,libinput`, un único Chromium kiosk, journal y dependencias, y deja las verificaciones físicas como pendientes cuando corresponde.
+- `src/hmi_ui/magi_server.py`: añade validación estructural independiente para MELCHIOR-1, BALTHASAR-2 y CASPER-3; gate de Golden Path, veto efectivo, un único BALTHASAR-EXECUTOR operacional, preservación de fallos, resumen hablado validado, perfiles Wi-Fi/UUID/autoconnect y transacciones BlueZ con desafíos explícitos.
+- `src/hmi_ui/static/js/magi.js`: elimina progreso aleatorio y consenso fabricado; mantiene estados neutrales hasta recibir dictámenes, representa veto/disenso/ejecución omitida, conserva evidencia estructurada de fallo y añade control determinista de pausa/puntuación/reinicio STT.
+- `src/hmi_ui/static/js/network.js`: agrega perfiles Wi-Fi conocidos, reconexión por prioridad con UUID final verificado, requisito de autoconnect confirmado, serialización/cancelación de acciones Bluetooth y UI explícita para PIN/passkey/confirmación.
+- `COMMAND_EXECUTION_AUDIT.md`: registra este rechazo, las correcciones y los límites de evidencia sin modificar el historial anterior.
+- **Core 3:** no cambió. El estado observado no contiene paths bajo `src/rt_core`, `hardware/` ni otro componente del motor RT.
+
+### 11.8 Evidencia recibida del harness — exclusivamente `MOCK/STATIC PASS`
+
+Los siguientes son outputs literales recibidos del harness local. Se reproducen sin agregar comandos, códigos de salida ni contexto no proporcionado:
+
+```text
+EXECUTION_GATE_TEST_OK: original directive reaches sole operational BALTHASAR-EXECUTOR only after valid Golden Path
+STRICT_POD_TEST_OK: POSICION-only outputs fail validation, skip execution, and return HTTP failure
+VALID_VETO_TEST_OK: valid veto yields pipeline success, execution skipped, consensus false
+EXECUTION_FAILURE_TEST_OK: executor rc failure preserved and prevents pipeline success/consensus
+BLUEZ_AUTHORIZATION_TEST_OK: service UUID challenge requires explicit confirm and is never autoaccepted
+WIFI_CONNECT_TEST_OK: real UUID selected; SSID colon parsed; autoconnect reread and verified
+WIFI_FAILURE_TEST_OK: link success remains separate; autoconnect failure is HTTP 502 and success=false
+WIFI_RECONNECT_TEST_OK: highest-priority known autoconnect profile selected and final UUID verified
+PAIR_RESPONSE_TEST_OK: PIN padding preserved; confirmation absent sends nothing; explicit confirm sends yes
+HEADSET_PAIR_TEST_OK: NoInputNoOutput transaction succeeds only with final Paired/Trusted/Connected
+PAIR_CHALLENGE_TEST_OK: confirmation required is returned without autoaccept
+PAIR_AUTH_ERROR_TEST_OK: AuthenticationTimeout mapped literally and no success declared
+STT_PAUSE_TEST_OK: two final phrases punctuated after 1000ms; duplicate comma prevented
+STT_EXECUTE_TEST_OK: execute cancels pause timer and disables recognition restart
+UI_VETO_TEST_OK: HTTP 200 veto rendered as DISENSO/EJECUCION OMITIDA, not technical error
+UI_EXECUTOR_FAILURE_TEST_OK: HTTP 502 structured body keeps executor rc/stderr visible and no consensus
+UI_VALID_SUCCESS_TEST_OK: consensus and complete execution shown only for valid pipeline
+PY_COMPILE_OK
+```
+
+También se recibió el reporte de que se ejecutaron checks de sintaxis Node y Bash, pero no se recibió una cadena de output literal adicional para esos checks; por ello no se inventa ni transcribe una salida. Todos los resultados de esta sección son pruebas mock/locales y no certifican D-Bus/BlueZ, NetworkManager, Chromium, Wayland, audio ni periféricos reales.
+
+### 11.9 Separación obligatoria de estados
+
+- **MOCK/STATIC:** `PASS` limitado a los casos reportados en 11.8.
+- **HARDWARE/REMOTO:** `PENDIENTE` para servicios systemd, `WLR_BACKENDS=drm,libinput`, journal/libinput, NetworkManager real, Wi-Fi real, descubrimiento/pair/trust/connect BlueZ, AntiGravity vivo, TTS audible, OSK táctil y pantalla física.
+- **MICRÓFONO FÍSICO:** `PENDIENTE`; requiere captura real en Chromium kiosk y confirmación explícita del operador.
+- **DEPLOY:** `NO AUTORIZADO EN ESTA ITERACIÓN`; requiere autorización explícita posterior. No se ejecutará `--apply`, restart ni reboot como parte de esta reauditoría.
+- **Estado honesto:** `SIN EVIDENCIA SUFICIENTE` para declarar Fase 11 operativa hasta obtener outputs remotos completos y confirmación física del operador.
+
+### 11.10 Contraejemplo auditor y segundo pivote del gate de evidencia
+
+Un contraejemplo auditor posterior demostró que el gate todavía aceptaba una respuesta débil con HTTP 200 y una sección de evidencia trivial. Output literal recibido:
+
+```text
+WEAK_STATUS 200/EVIDENCIA:1
+```
+
+Este resultado invalida cualquier interpretación previa de las secciones 11.3, 11.8 o de la recomendación inicial de commit local que sugiriera validación suficiente del pipeline MAGI. Esas entradas se preservan como historial cronológico, pero quedan rectificadas: los PASS sintácticos y mocks anteriores no demostraban rechazo robusto de evidencia trivial. El estado de `3deae82` continúa `RECHAZADO / PIVOT` y la corrección posterior requiere su propia revalidación.
+
+Outputs literales recibidos después de endurecer el gate:
+
+```text
+TRIVIAL_POD_TEST_OK
+TRIVIAL_GOLDEN_TEST_OK
+GOOD_FIXTURE_TEST_OK
+SUMMARY_SANITIZE_TEST_OK
+HOSTILE_GATE_TEST_OK
+VETO_CONSISTENCY_TEST_OK
+```
+
+Clasificación: `MOCK/STATIC PASS` exclusivamente. Los resultados demuestran en fixtures locales el rechazo de dictámenes y Golden Paths triviales, la aceptación del fixture bueno, el saneamiento del resumen, el gate hostil y la consistencia del veto; no certifican ejecución real de tres pods, calidad semántica general, hardware ni servicios del target.
+
+**Estado posterior al segundo pivote:** `SIN EVIDENCIA SUFICIENTE` para operación o despliegue. Continúan pendientes la autorización explícita de deploy, la verificación remota completa, BlueZ y NetworkManager reales, el micrófono físico, STT/TTS audible, OSK/touch en ttyd y los servicios systemd sobre Raspberry Pi.
+
