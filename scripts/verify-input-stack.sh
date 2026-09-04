@@ -1,116 +1,137 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# HIL-RTOS WORKSTATION - INPUT SUBSYSTEM VERIFICATION SCRIPT (ROBUST RESOLVER)
-# ==============================================================================
-# Resuelve dinámicamente los dispositivos de entrada por nombre en /proc/bus/input/devices
-# excluyendo adaptadores de audio/CEC HDMI, y certifica que el compositor labwc
-# y wlroots carguen libinput en hardware real.
-# ==============================================================================
+# HIL-RTOS INPUT SUBSYSTEM VERIFICATION (evidence-based, no inferred success)
+# Usage: verify-input-stack.sh [--preflight|--certify|--certify-voice]
+set -uo pipefail
 
-set -eo pipefail
+MODE="${1:---preflight}"
+PROC_ROOT="${HIL_PROC_ROOT:-/proc}"
+FAILURES=0
+PENDING=0
 
-echo "========================================================================"
-echo ">>> [1/5] VERIFICANDO SERVICIOS SYSTEMD ACTIVOS..."
-echo "========================================================================"
+if [[ "$MODE" != "--preflight" && "$MODE" != "--certify" && "$MODE" != "--certify-voice" ]]; then
+    echo "[ERROR] Modo inválido: $MODE"
+    exit 64
+fi
+
+section() { echo "========================================================================"; echo ">>> $1"; echo "========================================================================"; }
+fail() { echo "  [FAIL] $1"; FAILURES=$((FAILURES + 1)); }
+run_literal() {
+    echo "  \$ $*"
+    "$@" 2>&1
+    local rc=$?
+    echo "  [exit=$rc]"
+    return "$rc"
+}
+
+section "[1/7] SERVICIOS SYSTEMD"
 for svc in seatd magi-ui magi-kiosk; do
-    if systemctl is-active --quiet "$svc"; then
-        echo "  [OK] $svc: ACTIVO"
-    else
-        echo "  [ERROR] $svc: INACTIVO / FALLIDO"
-        systemctl status "$svc" --no-pager -l || true
-        exit 1
+    echo "  \$ systemctl is-active $svc"
+    service_state=$(systemctl is-active "$svc" 2>&1); service_rc=$?
+    printf '%s\n' "$service_state"; echo "  [exit=$service_rc]"
+    if [[ $service_rc -ne 0 || "$service_state" != "active" ]]; then
+        fail "$svc no está active"
+        run_literal systemctl status "$svc" --no-pager -l || true
     fi
 done
 
-echo ""
-echo "========================================================================"
-echo ">>> [2/5] RESOLVIENDO DISPOSITIVOS DE ENTRADA REALES (KERNEL / PROC)..."
-echo "========================================================================"
+section "[2/7] DISPOSITIVOS DE ENTRADA"
+INPUT_DEVICES="$PROC_ROOT/bus/input/devices"
+echo "  \$ grep '^N: Name=' $INPUT_DEVICES"
+if [[ -r "$INPUT_DEVICES" ]]; then
+    grep '^N: Name=' "$INPUT_DEVICES" || true
+    touch_line=$(grep -E 'N: Name=.*(QDtech|Touch|WaveShare)' "$INPUT_DEVICES" | head -n 1 || true)
+    [[ -n "$touch_line" ]] || fail "No se detectó touchscreen reconocido en $INPUT_DEVICES"
+else
+    fail "No se puede leer $INPUT_DEVICES"
+fi
 
-# Resolución dinámica de la pantalla táctil (QDtech / Touchscreen)
-TOUCH_NAME=$(grep -E 'N: Name=.*(QDtech|Touch|WaveShare)' /proc/bus/input/devices | head -1 | sed -e 's/N: Name=//g' -e 's/"//g' || true)
-TOUCH_EVENT=$(grep -B2 -A6 -E 'N: Name=.*(QDtech|Touch|WaveShare)' /proc/bus/input/devices | grep -oP 'event\K[0-9]+' | head -1 || true)
-
-if [ -n "$TOUCH_EVENT" ]; then
-    echo "  [OK] Pantalla Táctil Detectada:"
-    echo "       Nombre: \"$TOUCH_NAME\""
-    echo "       Nodo:   /dev/input/event${TOUCH_EVENT}"
-    if [ -e "/dev/input/event${TOUCH_EVENT}" ]; then
-        echo "       Estado: Dispositivo presente en filesystem (/dev/input/event${TOUCH_EVENT})"
+section "[3/7] LABWC Y ENTORNO WLR"
+echo "  \$ pgrep -x labwc"
+labwc_pids=$(pgrep -x labwc 2>&1); labwc_rc=$?
+printf '%s\n' "$labwc_pids"; echo "  [exit=$labwc_rc]"
+labwc_count=$(printf '%s\n' "$labwc_pids" | awk 'NF {count++} END {print count+0}')
+if [[ $labwc_rc -ne 0 || $labwc_count -ne 1 ]]; then
+    fail "Se esperaba exactamente un proceso labwc; encontrados: $labwc_count"
+else
+    labwc_pid="$labwc_pids"; env_file="$PROC_ROOT/$labwc_pid/environ"
+    echo "  \$ tr '\\0' '\\n' < $env_file"
+    if [[ -r "$env_file" ]]; then
+        env_output=$(tr '\0' '\n' < "$env_file"); printf '%s\n' "$env_output"
+        wlr_count=$(printf '%s\n' "$env_output" | grep -c '^WLR_BACKENDS=' || true)
+        wlr_value=$(printf '%s\n' "$env_output" | grep '^WLR_BACKENDS=' || true)
+        [[ $wlr_count -eq 1 && "$wlr_value" == "WLR_BACKENDS=drm,libinput" ]] || fail "labwc debe contener exactamente WLR_BACKENDS=drm,libinput"
     else
-        echo "       [ERROR] /dev/input/event${TOUCH_EVENT} no existe en filesystem"
-        exit 1
+        fail "No se puede leer $env_file"
+    fi
+fi
+
+section "[4/7] CHROMIUM KIOSK ÚNICO"
+chromium_pids=()
+for cmdline_file in "$PROC_ROOT"/[0-9]*/cmdline; do
+    [[ -r "$cmdline_file" ]] || continue
+    cmdline=$(tr '\0' ' ' < "$cmdline_file"); first_arg=${cmdline%% *}; binary=${first_arg##*/}
+    if [[ "$binary" =~ ^chromium(-browser)?$ && "$cmdline" == *" --kiosk "* && "$cmdline" == *"http://127.0.0.1:8080/"* ]]; then
+        chromium_pids+=("$(basename "$(dirname "$cmdline_file")")")
+    fi
+done
+printf '  Chromium kiosk PIDs:'; printf ' %s' "${chromium_pids[@]:-}"; printf '\n'
+if [[ ${#chromium_pids[@]} -ne 1 ]]; then
+    fail "Se esperaba exactamente una instancia Chromium kiosk relevante; encontradas: ${#chromium_pids[@]}"
+else
+    chromium_cmdline=$(tr '\0' ' ' < "$PROC_ROOT/${chromium_pids[0]}/cmdline")
+    echo "  \$ tr '\\0' ' ' < $PROC_ROOT/${chromium_pids[0]}/cmdline"; printf '%s\n' "$chromium_cmdline"
+    required_flags=("--kiosk" "--ozone-platform=wayland" "--user-data-dir=/tmp/chromium_magi_profile" "--auto-accept-camera-and-microphone-capture" "--unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080" "http://127.0.0.1:8080/")
+    for expected in "${required_flags[@]}"; do
+        [[ "$chromium_cmdline" == *"$expected"* ]] || fail "Chromium no contiene flag/origen esperado: $expected"
+    done
+fi
+
+section "[5/7] JOURNAL DEL BOOT ACTUAL"
+echo "  \$ journalctl -b -u magi-kiosk --no-pager"
+journal_output=$(journalctl -b -u magi-kiosk --no-pager 2>&1); journal_rc=$?
+printf '%s\n' "$journal_output"; echo "  [exit=$journal_rc]"
+if [[ $journal_rc -ne 0 ]]; then
+    fail "No se pudo consultar el journal del boot actual"
+elif printf '%s\n' "$journal_output" | grep -Eiq 'fatal|libinput[^[:alnum:]]*error|error[^[:alnum:]]*libinput'; then
+    fail "El journal contiene errores fatales o de libinput"
+fi
+
+section "[6/7] DEPENDENCIAS OPERATIVAS"
+for tool in wvkbd-mobintl agy bluetoothctl nmcli; do
+    echo "  \$ command -v $tool"
+    tool_path=$(command -v "$tool" 2>&1); tool_rc=$?
+    printf '%s\n' "$tool_path"; echo "  [exit=$tool_rc]"
+    [[ $tool_rc -eq 0 && -n "$tool_path" ]] || fail "Dependencia ausente: $tool"
+done
+
+if [[ "$MODE" == "--certify-voice" ]]; then
+    echo "  \$ arecord -l"
+    mic_output=$(arecord -l 2>&1); mic_rc=$?
+    printf '%s\n' "$mic_output"; echo "  [exit=$mic_rc]"
+    if [[ $mic_rc -ne 0 ]] || ! printf '%s\n' "$mic_output" | grep -Eiq 'card [0-9]+:|CAPTURE'; then
+        fail "No se detectó captura de audio; certificación de voz rechazada"
     fi
 else
-    echo "  [WARN] No se detectó pantalla táctil reconocida por nombre en /proc/bus/input/devices"
+    echo "  [PENDIENTE] Use --certify-voice para comprobar captura de micrófono"
+    PENDING=$((PENDING + 1))
 fi
 
-# Resolución dinámica del teclado físico (excluyendo Mouse y controles secundarios)
-KBD_NAME=$(grep -E 'N: Name=.*(Keyboard|keyboard)' /proc/bus/input/devices | grep -vE '(Mouse|Control)' | head -1 | sed -e 's/N: Name=//g' -e 's/"//g' || true)
-KBD_EVENT=$(grep -B2 -A6 -E 'N: Name=".*(Keyboard|keyboard)"' /proc/bus/input/devices | grep -vE '(Mouse|Control)' | grep -oP 'event\K[0-9]+' | head -1 || true)
-
-if [ -n "$KBD_EVENT" ]; then
-    echo "  [OK] Teclado Físico Detectado:"
-    echo "       Nombre: \"$KBD_NAME\""
-    echo "       Nodo:   /dev/input/event${KBD_EVENT}"
-    if [ -e "/dev/input/event${KBD_EVENT}" ]; then
-        echo "       Estado: Dispositivo presente en filesystem (/dev/input/event${KBD_EVENT})"
+section "[7/7] VALIDACIÓN FÍSICA DEL OPERADOR"
+echo "  [PENDIENTE] Confirmar toque, escritura ttyd, wvkbd y captura/reproducción de voz reales."
+PENDING=$((PENDING + 1))
+if [[ "$MODE" == "--certify" || "$MODE" == "--certify-voice" ]]; then
+    if [[ "${HIL_OPERATOR_CONFIRMED:-}" != "yes" ]]; then
+        fail "Certificación requiere HIL_OPERATOR_CONFIRMED=yes tras validación física"
     else
-        echo "       [ERROR] /dev/input/event${KBD_EVENT} no existe en filesystem"
-        exit 1
+        echo "  HIL_OPERATOR_CONFIRMED=yes"
     fi
+fi
+
+section "RESULTADO"
+echo "  MODO=$MODE"; echo "  FAILURES=$FAILURES"; echo "  PENDING=$PENDING"
+if [[ $FAILURES -ne 0 ]]; then echo ">>> VERIFICACIÓN FALLIDA"; exit 1; fi
+if [[ "$MODE" == "--preflight" ]]; then
+    echo ">>> PREFLIGHT TÉCNICO APROBADO; VALIDACIONES FÍSICAS/VOZ SIGUEN PENDIENTES"
 else
-    echo "  [WARN] No se detectó teclado físico primario en /proc/bus/input/devices"
+    echo ">>> CERTIFICACIÓN TÉCNICA APROBADA CON CONFIRMACIÓN DEL OPERADOR"
 fi
-
-# Confirmación explícita de descarte de dispositivos no humanos (ej. HDMI audio jack)
-echo "  [INFO] Dispositivos de audio/CEC excluidos de input humano:"
-grep -E 'N: Name=.*(vc4-hdmi|HDMI Jack|pwr_button)' /proc/bus/input/devices | sed 's/N: Name=/         - /' || true
-
-echo ""
-echo "========================================================================"
-echo ">>> [3/5] VERIFICANDO VARIABLES DE ENTORNO EN MAGI-KIOSK..."
-echo "========================================================================"
-KIOSK_PID=$(pgrep -f "/usr/bin/labwc" | head -n 1 || true)
-if [ -z "$KIOSK_PID" ]; then
-    echo "  [ERROR] Proceso labwc no encontrado"
-    exit 1
-fi
-echo "  [OK] PID de labwc: $KIOSK_PID"
-
-WLR_ENV=$(tr '\0' '\n' < /proc/$KIOSK_PID/environ | grep "^WLR_BACKENDS=" || true)
-echo "  [STATUS] $WLR_ENV"
-
-if [[ "$WLR_ENV" == *"libinput"* ]]; then
-    echo "  [OK] libinput presente en WLR_BACKENDS de labwc"
-else
-    echo "  [ERROR CRITICO] WLR_BACKENDS NO contiene 'libinput'. Touch/Teclado no responderán."
-    exit 2
-fi
-
-echo ""
-echo "========================================================================"
-echo ">>> [4/5] VERIFICANDO GESTION DE ASIENTO (SEATD / LIBSEAT)..."
-echo "========================================================================"
-if [ -e /run/seatd.sock ]; then
-    echo "  [OK] Socket /run/seatd.sock activo"
-else
-    echo "  [WARN] Socket /run/seatd.sock no encontrado"
-fi
-
-echo ""
-echo "========================================================================"
-echo ">>> [5/5] VERIFICANDO LOGS DE COMPOSITOR Y CLIENTE HMI..."
-echo "========================================================================"
-JOURNAL_ERR=$(journalctl -u magi-kiosk -n 20 --no-pager | grep -i "libinput error" || true)
-if [ -n "$JOURNAL_ERR" ]; then
-    echo "  [WARN] Errores detectados en journal:"
-    echo "$JOURNAL_ERR"
-else
-    echo "  [OK] Cero errores criticos de libinput en journal recent"
-fi
-
-echo ""
-echo "========================================================================"
-echo ">>> VERIFICACION COMPLETADA CON EXITO: STACK DE ENTRADA CERTIFICADO"
-echo "========================================================================"
