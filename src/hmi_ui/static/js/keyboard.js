@@ -9,21 +9,146 @@ class MagiKeyboard {
         this.isShift = false;
         this.isSymbol = false;
         this.container = document.getElementById("magi-virtual-keyboard");
+        this.terminalOskRequestPending = false;
+        this.terminalOskDesired = false;
+        this.terminalActivationLayer = null;
+        this.terminalHideButton = null;
+        this.terminalStatus = null;
         this.init();
     }
 
     init() {
-        if (!this.container) return;
+        if (this.container) {
+            // Escuchar foco en inputs
+            document.addEventListener("focusin", (e) => {
+                if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+                    this.activeInput = e.target;
+                    this.show();
+                }
+            });
 
-        // Escuchar foco en inputs
-        document.addEventListener("focusin", (e) => {
-            if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
-                this.activeInput = e.target;
-                this.show();
+            this.render();
+        }
+        this.setupTerminalKeyboard();
+    }
+
+    async terminalOskRequest(action) {
+        if (this.terminalOskRequestPending) {
+            throw new Error("Ya existe una solicitud OSK en curso");
+        }
+        this.terminalOskRequestPending = true;
+        try {
+            const response = await fetch(`/api/osk/${action}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+            let data;
+            try {
+                data = await response.json();
+            } catch (error) {
+                throw new Error(`HTTP ${response.status}: respuesta JSON invalida`);
+            }
+            if (!response.ok || data.success !== true) {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            }
+            return data;
+        } finally {
+            this.terminalOskRequestPending = false;
+        }
+    }
+
+    setupTerminalKeyboard() {
+        const panel = document.getElementById("panel-agent-terminal");
+        const frame = document.getElementById("terminal-frame");
+        if (!panel || !frame) return;
+
+        panel.style.position = "relative";
+
+        const activationLayer = document.createElement("button");
+        activationLayer.type = "button";
+        activationLayer.setAttribute("aria-label", "Activar teclado para la terminal");
+        activationLayer.textContent = "TOCAR PARA ACTIVAR TERMINAL Y TECLADO";
+        activationLayer.style.cssText = [
+            "position:absolute", "inset:0", "z-index:20", "border:1px solid var(--magi-orange)",
+            "background:rgba(0,0,0,0.35)", "color:var(--magi-orange)", "font:inherit",
+            "cursor:pointer", "touch-action:manipulation"
+        ].join(";");
+
+        const hideButton = document.createElement("button");
+        hideButton.type = "button";
+        hideButton.className = "eva-btn-action";
+        hideButton.setAttribute("aria-label", "Ocultar teclado de la terminal");
+        hideButton.textContent = "OCULTAR TECLADO";
+        hideButton.style.cssText = "display:none; position:absolute; top:6px; right:6px; z-index:30; padding:6px 10px;";
+
+        const status = document.createElement("div");
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+        status.style.cssText = "display:none; position:absolute; left:8px; bottom:8px; z-index:31; padding:6px; background:#080808; color:var(--magi-red);";
+
+        panel.append(activationLayer, hideButton, status);
+        this.terminalActivationLayer = activationLayer;
+        this.terminalHideButton = hideButton;
+        this.terminalStatus = status;
+
+        activationLayer.addEventListener("pointerdown", async (event) => {
+            event.preventDefault();
+            if (this.terminalOskRequestPending) return;
+            this.terminalOskDesired = true;
+            activationLayer.disabled = true;
+            activationLayer.textContent = "ACTIVANDO TECLADO...";
+            status.style.display = "none";
+            try {
+                await this.terminalOskRequest("show");
+                if (!this.terminalOskDesired) {
+                    await this.hideTerminalKeyboard();
+                    return;
+                }
+                activationLayer.style.display = "none";
+                hideButton.style.display = "block";
+                frame.focus();
+            } catch (error) {
+                this.terminalOskDesired = false;
+                activationLayer.disabled = false;
+                activationLayer.textContent = "REINTENTAR ACTIVACION DE TERMINAL Y TECLADO";
+                status.textContent = `ERROR OSK: ${error.message}`;
+                status.style.display = "block";
             }
         });
 
-        this.render();
+        hideButton.addEventListener("click", () => this.hideTerminalKeyboard());
+
+        const observer = new MutationObserver(() => {
+            if (panel.style.display === "none") this.hideTerminalKeyboard();
+            else this.reactivateTerminalLayer();
+        });
+        observer.observe(panel, { attributes: true, attributeFilter: ["style", "class"] });
+    }
+
+    reactivateTerminalLayer() {
+        if (!this.terminalActivationLayer || this.terminalOskDesired) return;
+        this.terminalActivationLayer.disabled = false;
+        this.terminalActivationLayer.textContent = "TOCAR PARA ACTIVAR TERMINAL Y TECLADO";
+        this.terminalActivationLayer.style.display = "block";
+        if (this.terminalHideButton) this.terminalHideButton.style.display = "none";
+    }
+
+    async hideTerminalKeyboard() {
+        this.terminalOskDesired = false;
+        if (this.terminalOskRequestPending) return;
+        if (this.terminalHideButton) this.terminalHideButton.disabled = true;
+        try {
+            await this.terminalOskRequest("hide");
+            if (this.terminalStatus) this.terminalStatus.style.display = "none";
+        } catch (error) {
+            if (this.terminalStatus) {
+                this.terminalStatus.textContent = `ERROR AL OCULTAR OSK: ${error.message}`;
+                this.terminalStatus.style.display = "block";
+            }
+        } finally {
+            if (this.terminalHideButton) this.terminalHideButton.disabled = false;
+            this.reactivateTerminalLayer();
+        }
     }
 
     show() {

@@ -9,7 +9,45 @@ class MagiNetwork {
         this.wifiListContainer = document.getElementById("wifi-network-list");
         this.btListContainer = document.getElementById("bt-device-list");
         this.selectedSSID = null;
+        this.requestTimeoutMs = 25000;
+        this.wifiScanController = null;
+        this.bluetoothScanController = null;
+        this.wifiScanSequence = 0;
+        this.bluetoothScanSequence = 0;
         this.init();
+    }
+
+    async fetchJson(url, options = {}, timeoutMs = this.requestTimeoutMs, externalSignal = null) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort("timeout"), timeoutMs);
+        const abortForwarder = () => controller.abort("superseded");
+        if (externalSignal) {
+            if (externalSignal.aborted) controller.abort("superseded");
+            else externalSignal.addEventListener("abort", abortForwarder, { once: true });
+        }
+        try {
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            let data;
+            try {
+                data = await response.json();
+            } catch (error) {
+                throw new Error(`HTTP ${response.status}: respuesta JSON invalida`);
+            }
+            if (!response.ok || !data.success) {
+                const literalError = data.error || data.message || `HTTP ${response.status}`;
+                throw new Error(literalError);
+            }
+            return data;
+        } catch (error) {
+            if (controller.signal.aborted) {
+                const reason = controller.signal.reason === "superseded" ? "Solicitud reemplazada" : "Tiempo de espera agotado";
+                throw new DOMException(reason, "AbortError");
+            }
+            throw error;
+        } finally {
+            clearTimeout(timer);
+            if (externalSignal) externalSignal.removeEventListener("abort", abortForwarder);
+        }
     }
 
     init() {
@@ -66,6 +104,8 @@ class MagiNetwork {
         if (this.modal) {
             this.modal.style.display = "none";
         }
+        if (this.wifiScanController) this.wifiScanController.abort();
+        if (this.bluetoothScanController) this.bluetoothScanController.abort();
         this.cancelConnectionPrompt();
     }
 
@@ -91,13 +131,17 @@ class MagiNetwork {
 
     async scanWifi() {
         if (!this.wifiListContainer) return;
+        if (this.wifiScanController) this.wifiScanController.abort();
+        const controller = new AbortController();
+        const sequence = ++this.wifiScanSequence;
+        this.wifiScanController = controller;
         this.wifiListContainer.innerHTML = "<div style='color: var(--magi-orange); padding: 12px;'>[+] ESCANEANDO ESPECTRO DE RADIO WI-FI...</div>";
 
         try {
-            const res = await fetch("/api/wifi/scan");
-            const data = await res.json();
+            const data = await this.fetchJson("/api/wifi/scan", {}, this.requestTimeoutMs, controller.signal);
+            if (sequence !== this.wifiScanSequence) return;
 
-            if (!data.success || !data.networks || data.networks.length === 0) {
+            if (!Array.isArray(data.networks) || data.networks.length === 0) {
                 this.wifiListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No se detectaron redes inalambricas en el area.</div>";
                 return;
             }
@@ -143,7 +187,10 @@ class MagiNetwork {
                 this.wifiListContainer.appendChild(item);
             });
         } catch (e) {
+            if (sequence !== this.wifiScanSequence || (e.name === "AbortError" && controller.signal.aborted)) return;
             this.wifiListContainer.innerHTML = `<div style='color: var(--magi-red); padding: 12px;'>Error de escaneo: ${e.message}</div>`;
+        } finally {
+            if (sequence === this.wifiScanSequence) this.wifiScanController = null;
         }
     }
 
@@ -185,47 +232,45 @@ class MagiNetwork {
         }
 
         try {
-            const res = await fetch("/api/wifi/connect", {
+            if (passInput) passInput.disabled = true;
+            const data = await this.fetchJson("/api/wifi/connect", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ssid: this.selectedSSID, password: password })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                if (statusMsg) {
-                    statusMsg.style.color = "var(--magi-green)";
-                    statusMsg.innerText = "[OK] CONECTADO EXITOSAMENTE A " + this.selectedSSID;
-                }
-                setTimeout(() => {
-                    this.cancelConnectionPrompt();
-                    this.scanWifi();
-                    if (window.magiUI) window.magiUI.updateStatus();
-                }, 1500);
-            } else {
-                if (statusMsg) {
-                    statusMsg.style.color = "var(--magi-red)";
-                    statusMsg.innerText = "[-] ERROR: " + data.message;
-                }
+            }, this.requestTimeoutMs);
+            if (statusMsg) {
+                statusMsg.style.color = "var(--magi-green)";
+                statusMsg.innerText = "[OK] " + (data.message || `CONECTADO A ${this.selectedSSID}`);
             }
+            setTimeout(() => {
+                this.cancelConnectionPrompt();
+                this.scanWifi();
+                if (window.magiUI) window.magiUI.updateStatus();
+            }, 1500);
         } catch (e) {
             if (statusMsg) {
                 statusMsg.style.color = "var(--magi-red)";
                 statusMsg.innerText = "[-] ERROR DE ENLACE: " + e.message;
             }
+        } finally {
+            if (passInput) passInput.disabled = false;
         }
     }
 
     async scanBluetooth() {
         if (!this.btListContainer) return;
+        if (this.bluetoothScanController) this.bluetoothScanController.abort();
+        const controller = new AbortController();
+        const sequence = ++this.bluetoothScanSequence;
+        this.bluetoothScanController = controller;
         this.btListContainer.innerHTML = "<div style='color: var(--magi-orange); padding: 12px;'>[+] CONSULTANDO DISPOSITIVOS BLUETOOTH...</div>";
 
         try {
-            const res = await fetch("/api/bluetooth/scan");
-            const data = await res.json();
+            const data = await this.fetchJson("/api/bluetooth/scan", {}, 30000, controller.signal);
+            if (sequence !== this.bluetoothScanSequence) return;
 
-            if (!data.success || !data.devices || data.devices.length === 0) {
-                this.btListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>No hay dispositivos Bluetooth vinculados en este momento.</div>";
+            if (!Array.isArray(data.devices) || data.devices.length === 0) {
+                this.btListContainer.innerHTML = "<div style='color: #888; padding: 12px;'>Escaneo completado: no se detectaron dispositivos Bluetooth.</div>";
                 return;
             }
 
@@ -233,17 +278,58 @@ class MagiNetwork {
             data.devices.forEach(dev => {
                 const item = document.createElement("div");
                 item.className = "wifi-item";
+                const state = [dev.paired ? "VINCULADO" : "NO VINCULADO", dev.trusted ? "CONFIABLE" : "NO CONFIABLE", dev.connected ? "CONECTADO" : "DESCONECTADO"].join(" // ");
+                const actions = [];
+                if (!dev.paired) actions.push(["pair", "EMPAREJAR"]);
+                if (dev.paired && !dev.trusted) actions.push(["trust", "CONFIAR"]);
+                actions.push(dev.connected ? ["disconnect", "DESCONECTAR"] : ["connect", "CONECTAR"]);
                 item.innerHTML = `
                     <div>
                         <div class="wifi-name">${this.escapeHtml(dev.name)}</div>
-                        <div class="wifi-sec">${dev.mac} // ${dev.paired ? "VINCULADO" : "DISPONIBLE"}</div>
+                        <div class="wifi-sec">${this.escapeHtml(dev.mac)} // ${state}</div>
+                        <div class="bt-action-status" style="color: var(--magi-orange); font-size: 11px;"></div>
                     </div>
-                    <button class="eva-btn-action" style="padding: 6px 12px; font-size: 11px;">CONECTAR</button>
+                    <div class="bt-actions"></div>
                 `;
+                const actionContainer = item.querySelector(".bt-actions");
+                actions.forEach(([action, label]) => {
+                    const button = document.createElement("button");
+                    button.className = "eva-btn-action";
+                    button.style.cssText = "padding: 6px 12px; font-size: 11px; margin-left: 6px;";
+                    button.textContent = label;
+                    button.addEventListener("click", () => this.bluetoothAction(dev.mac, action, item));
+                    actionContainer.appendChild(button);
+                });
                 this.btListContainer.appendChild(item);
             });
         } catch (e) {
+            if (sequence !== this.bluetoothScanSequence || (e.name === "AbortError" && controller.signal.aborted)) return;
             this.btListContainer.innerHTML = `<div style='color: var(--magi-red); padding: 12px;'>Error Bluetooth: ${e.message}</div>`;
+        } finally {
+            if (sequence === this.bluetoothScanSequence) this.bluetoothScanController = null;
+        }
+    }
+
+    async bluetoothAction(mac, action, item) {
+        const status = item.querySelector(".bt-action-status");
+        const buttons = Array.from(item.querySelectorAll("button"));
+        buttons.forEach(button => { button.disabled = true; });
+        status.style.color = "var(--magi-orange)";
+        status.textContent = `[+] ${action.toUpperCase()} EN PROGRESO...`;
+        try {
+            const data = await this.fetchJson(`/api/bluetooth/${action}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mac })
+            }, 30000);
+            if (!data.verified) throw new Error("El backend no verifico el estado Bluetooth solicitado");
+            status.style.color = "var(--magi-green)";
+            status.textContent = `[OK] ${action.toUpperCase()} VERIFICADO`;
+            setTimeout(() => this.scanBluetooth(), 500);
+        } catch (error) {
+            status.style.color = "var(--magi-red)";
+            status.textContent = `[-] ${error.message}`;
+            buttons.forEach(button => { button.disabled = false; });
         }
     }
 
