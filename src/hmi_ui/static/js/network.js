@@ -14,6 +14,11 @@ class MagiNetwork {
         this.bluetoothScanController = null;
         this.wifiScanSequence = 0;
         this.bluetoothScanSequence = 0;
+        this.knownWifiController = null;
+        this.wifiReconnectPending = false;
+        this.bluetoothActionPending = new Set();
+        this.bluetoothActionControllers = new Map();
+        this.knownWifiContainer = null;
         this.init();
     }
 
@@ -35,7 +40,10 @@ class MagiNetwork {
             }
             if (!response.ok || !data.success) {
                 const literalError = data.error || data.message || `HTTP ${response.status}`;
-                throw new Error(literalError);
+                const error = new Error(literalError);
+                error.status = response.status;
+                error.data = data;
+                throw error;
             }
             return data;
         } catch (error) {
@@ -90,6 +98,28 @@ class MagiNetwork {
 
         const btnCancelConn = document.getElementById("btn-cancel-connect");
         bindTap(btnCancelConn, () => this.cancelConnectionPrompt());
+        this.setupKnownWifiControls();
+    }
+
+    setupKnownWifiControls() {
+        if (!this.wifiListContainer || this.knownWifiContainer) return;
+        const section = document.createElement("section");
+        section.setAttribute("aria-label", "Perfiles Wi-Fi conocidos");
+        section.style.cssText = "border-top:1px solid var(--magi-orange); padding:8px;";
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "eva-btn-action";
+        button.textContent = "RECONECTAR CONOCIDA";
+        button.addEventListener("click", () => this.reconnectKnownWifi(button));
+        const status = document.createElement("div");
+        status.className = "known-wifi-status";
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+        const list = document.createElement("div");
+        list.className = "known-wifi-list";
+        section.append(button, status, list);
+        this.wifiListContainer.insertAdjacentElement("afterend", section);
+        this.knownWifiContainer = section;
     }
 
     open() {
@@ -106,6 +136,8 @@ class MagiNetwork {
         }
         if (this.wifiScanController) this.wifiScanController.abort();
         if (this.bluetoothScanController) this.bluetoothScanController.abort();
+        if (this.knownWifiController) this.knownWifiController.abort();
+        this.bluetoothActionControllers.forEach(controller => controller.abort());
         this.cancelConnectionPrompt();
     }
 
@@ -136,6 +168,7 @@ class MagiNetwork {
         const sequence = ++this.wifiScanSequence;
         this.wifiScanController = controller;
         this.wifiListContainer.innerHTML = "<div style='color: var(--magi-orange); padding: 12px;'>[+] ESCANEANDO ESPECTRO DE RADIO WI-FI...</div>";
+        this.loadKnownWifi();
 
         try {
             const data = await this.fetchJson("/api/wifi/scan", {}, this.requestTimeoutMs, controller.signal);
@@ -238,6 +271,11 @@ class MagiNetwork {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ssid: this.selectedSSID, password: password })
             }, this.requestTimeoutMs);
+            if (data.autoconnect_verified !== true) {
+                const error = new Error("Enlace recibido sin autoconnect verificado");
+                error.data = data;
+                throw error;
+            }
             if (statusMsg) {
                 statusMsg.style.color = "var(--magi-green)";
                 statusMsg.innerText = "[OK] " + (data.message || `CONECTADO A ${this.selectedSSID}`);
@@ -254,6 +292,54 @@ class MagiNetwork {
             }
         } finally {
             if (passInput) passInput.disabled = false;
+        }
+    }
+
+    async loadKnownWifi() {
+        if (!this.knownWifiContainer) return;
+        if (this.knownWifiController) this.knownWifiController.abort();
+        const controller = new AbortController();
+        this.knownWifiController = controller;
+        const list = this.knownWifiContainer.querySelector(".known-wifi-list");
+        const status = this.knownWifiContainer.querySelector(".known-wifi-status");
+        status.textContent = "[+] CARGANDO PERFILES CONOCIDOS...";
+        try {
+            const data = await this.fetchJson("/api/wifi/known", {}, this.requestTimeoutMs, controller.signal);
+            list.innerHTML = "";
+            (data.profiles || []).forEach(profile => {
+                const row = document.createElement("div");
+                row.className = "wifi-sec";
+                row.textContent = `${profile.name} // SSID: ${profile.ssid} // AUTOCONNECT: ${profile.autoconnect ? "SI" : "NO"} // PRIORIDAD: ${profile.priority}`;
+                list.appendChild(row);
+            });
+            status.textContent = data.profiles?.length ? "PERFILES CONOCIDOS VERIFICADOS" : "NO HAY PERFILES CONOCIDOS";
+        } catch (error) {
+            if (error.name === "AbortError" && controller.signal.aborted) return;
+            status.textContent = `ERROR PERFILES: ${error.message}`;
+        } finally {
+            if (this.knownWifiController === controller) this.knownWifiController = null;
+        }
+    }
+
+    async reconnectKnownWifi(button) {
+        if (this.wifiReconnectPending) return;
+        this.wifiReconnectPending = true;
+        const status = this.knownWifiContainer.querySelector(".known-wifi-status");
+        button.disabled = true;
+        status.textContent = "[+] RECONECTANDO PERFIL CONOCIDO...";
+        try {
+            const data = await this.fetchJson("/api/wifi/reconnect", {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+            }, this.requestTimeoutMs);
+            if (data.verified !== true) throw new Error("El backend no verifico el UUID reconectado");
+            status.textContent = `[OK] UUID VERIFICADO: ${data.uuid}`;
+            await this.loadKnownWifi();
+            this.scanWifi();
+        } catch (error) {
+            status.textContent = `[-] RECONEXION FALLIDA: ${error.message}`;
+        } finally {
+            button.disabled = false;
+            this.wifiReconnectPending = false;
         }
     }
 
@@ -310,9 +396,62 @@ class MagiNetwork {
         }
     }
 
-    async bluetoothAction(mac, action, item) {
+    renderPairingChallenge(mac, item, data) {
+        const previous = item.querySelector(".bt-pairing-challenge");
+        if (previous) previous.remove();
+        const panel = document.createElement("div");
+        panel.className = "bt-pairing-challenge";
+        panel.setAttribute("role", "group");
+        panel.setAttribute("aria-label", "Desafio de emparejamiento Bluetooth");
+        panel.style.cssText = "width:100%; padding:8px; border:1px solid var(--magi-orange);";
+        const label = document.createElement("div");
+        label.textContent = data.passkey_display
+            ? `${data.challenge_type}: ${data.passkey_display}`
+            : `BlueZ solicita ${data.challenge_type || "respuesta de pairing"}`;
+        panel.appendChild(label);
+        if (["pin", "passkey"].includes(data.challenge_type)) {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.inputMode = "numeric";
+            input.pattern = "[0-9]{1,6}";
+            input.maxLength = 6;
+            input.setAttribute("aria-label", "PIN o passkey Bluetooth");
+            const submit = document.createElement("button");
+            submit.type = "button";
+            submit.className = "eva-btn-action";
+            submit.textContent = "ENVIAR PIN";
+            submit.addEventListener("click", () => {
+                if (!/^[0-9]{1,6}$/.test(input.value)) {
+                    label.textContent = "PIN invalido: use de 1 a 6 digitos";
+                    return;
+                }
+                this.bluetoothAction(mac, "pair", item, { passkey: input.value });
+            });
+            panel.append(input, submit);
+        } else if (data.challenge_type === "confirmation") {
+            const yes = document.createElement("button");
+            yes.type = "button";
+            yes.className = "eva-btn-action";
+            yes.textContent = "SI, COINCIDE";
+            yes.addEventListener("click", () => this.bluetoothAction(mac, "pair", item, { confirm: true }));
+            const no = document.createElement("button");
+            no.type = "button";
+            no.className = "eva-btn-action";
+            no.textContent = "NO, RECHAZAR";
+            no.addEventListener("click", () => this.bluetoothAction(mac, "pair", item, { confirm: false }));
+            panel.append(yes, no);
+        }
+        item.appendChild(panel);
+    }
+
+    async bluetoothAction(mac, action, item, pairingResponse = {}) {
+        if (this.bluetoothActionPending.has(mac)) return;
+        this.bluetoothActionPending.add(mac);
+        const controller = new AbortController();
+        this.bluetoothActionControllers.set(mac, controller);
         const status = item.querySelector(".bt-action-status");
         const buttons = Array.from(item.querySelectorAll("button"));
+        let pairingChallenge = false;
         buttons.forEach(button => { button.disabled = true; });
         status.style.color = "var(--magi-orange)";
         status.textContent = `[+] ${action.toUpperCase()} EN PROGRESO...`;
@@ -320,16 +459,26 @@ class MagiNetwork {
             const data = await this.fetchJson(`/api/bluetooth/${action}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mac })
-            }, 30000);
+                body: JSON.stringify({ mac, ...pairingResponse })
+            }, 30000, controller.signal);
             if (!data.verified) throw new Error("El backend no verifico el estado Bluetooth solicitado");
             status.style.color = "var(--magi-green)";
             status.textContent = `[OK] ${action.toUpperCase()} VERIFICADO`;
             setTimeout(() => this.scanBluetooth(), 500);
         } catch (error) {
+            if (error.data?.pairing_required) {
+                pairingChallenge = true;
+                status.style.color = "var(--magi-orange)";
+                status.textContent = `[+] RESPUESTA REQUERIDA${error.data.error_code ? ` // ${error.data.error_code}` : ""}`;
+                this.renderPairingChallenge(mac, item, error.data);
+                return;
+            }
             status.style.color = "var(--magi-red)";
-            status.textContent = `[-] ${error.message}`;
-            buttons.forEach(button => { button.disabled = false; });
+            status.textContent = `[-] ${error.data?.error_code ? `${error.data.error_code}: ` : ""}${error.message}`;
+        } finally {
+            this.bluetoothActionPending.delete(mac);
+            this.bluetoothActionControllers.delete(mac);
+            if (!pairingChallenge) buttons.forEach(button => { button.disabled = false; });
         }
     }
 
