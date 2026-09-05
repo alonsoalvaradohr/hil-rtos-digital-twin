@@ -850,6 +850,8 @@ body {
 
 /* Terminal iframe */
 #terminal-frame {
+    position: relative;
+    z-index: 1;
     width: 100%;
     height: 100%;
     border: none;
@@ -1037,14 +1039,16 @@ body {
    TACTICAL TOUCH VIRTUAL KEYBOARD (MAGI OSK)
    ========================================================================== */
 #magi-virtual-keyboard {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     width: 1024px;
     height: 230px;
     background: #0D0D0D;
     border-top: 3px solid var(--magi-orange);
-    z-index: 300;
+    /* Keep the touch OSK above the cross-origin ttyd compositor surface. */
+    z-index: 10000;
+    pointer-events: auto;
     display: none;
     flex-direction: column;
     padding: 8px 12px;
