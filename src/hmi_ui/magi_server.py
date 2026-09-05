@@ -665,6 +665,59 @@ def _hide_osk(timeout=2.0):
     except (OSError, subprocess.SubprocessError) as exc:
         return {"success": False, "running": _pid_is_osk(pid), "pid": pid, "error": str(exc)}
 
+def _read_power_telemetry():
+    """Lee solo mediciones eléctricas que el hardware expone literalmente."""
+    telemetry = {
+        "core_voltage_v": None,
+        "current_a": None,
+        "power_w": None,
+        "current_available": False,
+        "power_available": False,
+    }
+
+    volts = _command_result(["vcgencmd", "measure_volts", "core"], timeout=2)
+    match = re.search(r"volt=([0-9.]+)V", volts["stdout"])
+    if volts["returncode"] == 0 and match:
+        telemetry["core_voltage_v"] = float(match.group(1))
+
+    # Las fuentes USB/batería, si existen, publican micro-unidades en sysfs.
+    power_supply_root = "/sys/class/power_supply"
+    if not os.path.isdir(power_supply_root):
+        return telemetry
+    for supply_name in sorted(os.listdir(power_supply_root)):
+        supply_path = os.path.join(power_supply_root, supply_name)
+        try:
+            def read_micro_value(name):
+                with open(os.path.join(supply_path, name), "r") as value_file:
+                    return float(value_file.read().strip()) / 1_000_000.0
+
+            if telemetry["current_a"] is None and os.path.isfile(os.path.join(supply_path, "current_now")):
+                telemetry["current_a"] = read_micro_value("current_now")
+                telemetry["current_available"] = True
+            if telemetry["power_w"] is None and os.path.isfile(os.path.join(supply_path, "power_now")):
+                telemetry["power_w"] = read_micro_value("power_now")
+                telemetry["power_available"] = True
+        except (OSError, ValueError):
+            continue
+    return telemetry
+
+
+def _primary_ip_address():
+    """Prioriza eth0 para que el cockpit muestre el enlace físico de la Pi."""
+    interfaces = _command_result(["ip", "-o", "-4", "addr", "show", "scope", "global"], timeout=2)
+    addresses = []
+    for line in interfaces["stdout"].splitlines():
+        match = re.match(r"\d+:\s+(\S+)\s+inet\s+(\d+\.\d+\.\d+\.\d+)/", line)
+        if match:
+            addresses.append((match.group(1), match.group(2)))
+    for interface, address in addresses:
+        if interface == "eth0":
+            return address
+    if addresses:
+        return addresses[0][1]
+    return "127.0.0.1"
+
+
 def get_system_status():
     status = {
         "hostname": os.uname().nodename if hasattr(os, "uname") else os.environ.get("COMPUTERNAME"),
@@ -677,6 +730,7 @@ def get_system_status():
         "wifi_connected": False,
         "wifi_ssid": "ETH0 DIRECT LINK",
         "ip_address": "127.0.0.1",
+        "power": _read_power_telemetry(),
         "rt_alive": False,
         "ipc_alive": False,
         "timestamp": time.time()
@@ -704,11 +758,8 @@ def get_system_status():
                 status["wifi_connected"] = True
                 status["wifi_ssid"] = parts[3]
 
-        # IP Address
-        ip_res = subprocess.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
-        ips = ip_res.stdout.strip().split()
-        if ips:
-            status["ip_address"] = ips[0]
+        # IP Address del enlace físico preferido, sin valor hardcodeado en la UI.
+        status["ip_address"] = _primary_ip_address()
 
         # Estado de SHM y Heartbeats
         if os.path.exists(SHM_PATH):
