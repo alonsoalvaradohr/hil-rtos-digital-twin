@@ -870,14 +870,22 @@ def api_audio_tts():
     if not text:
         return jsonify({"success": False, "error": "Texto vacio"}), 400
 
-    print(f"[+] MAGI TTS SYNTHESIS (Core 1): '{text}' [Rate: {rate}, Pitch: {pitch}]")
+    try:
+        speech_rate = max(100, min(400, int(float(rate) * 175)))
+        speech_pitch = max(0, min(99, int(float(pitch) * 50)))
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Rate o pitch invalidos"}), 400
+
+    print(f"[+] MAGI TTS SYNTHESIS (Core 1): '{text}' [Rate: {speech_rate}, Pitch: {speech_pitch}]")
 
     try:
         tts_cmd = None
         for bin_name in ["espeak-ng", "espeak"]:
             res = subprocess.run(["which", bin_name], capture_output=True, text=True)
             if res.returncode == 0:
-                tts_cmd = ["taskset", "-c", "1", bin_name, "-v", "f5", "-s", "175", "-p", "70", text]
+                # `es` is supplied by the Debian espeak-ng package and provides a
+                # neutral synthetic Spanish voice without relying on optional MBROLA voices.
+                tts_cmd = ["taskset", "-c", "1", bin_name, "-v", "es", "-s", str(speech_rate), "-p", str(speech_pitch), text]
                 break
 
         if tts_cmd:
