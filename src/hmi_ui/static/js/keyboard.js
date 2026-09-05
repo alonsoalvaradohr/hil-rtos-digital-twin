@@ -186,7 +186,15 @@ class MagiKeyboard {
             ["?123", "SPACE", "ENTER", "HIDE"]
         ];
 
-        const layout = this.isShift ? shiftLayout : defaultLayout;
+        const symbolLayout = [
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "="],
+            ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+"],
+            ["?", "/", "\\", "|", "<", ">", "[", "]", "{", "}", ";", ":"],
+            ["ABC", "'", "\"", ",", ".", "`", "~", "BKSP"],
+            ["SPACE", "ENTER", "HIDE"]
+        ];
+
+        const layout = this.isSymbol ? symbolLayout : (this.isShift ? shiftLayout : defaultLayout);
 
         this.container.innerHTML = "";
 
@@ -200,7 +208,7 @@ class MagiKeyboard {
                 keyEl.innerText = key;
 
                 if (key === "SPACE") keyEl.classList.add("kb-key-space");
-                if (key === "SHIFT" || key === "BKSP" || key === "?123" || key === "HIDE") keyEl.classList.add("kb-key-wide");
+                if (key === "SHIFT" || key === "BKSP" || key === "?123" || key === "ABC" || key === "HIDE") keyEl.classList.add("kb-key-wide");
                 if (key === "ENTER") keyEl.classList.add("kb-key-enter", "kb-key-wide");
 
                 keyEl.addEventListener("pointerdown", (e) => {
@@ -225,7 +233,14 @@ class MagiKeyboard {
         }
 
         if (key === "?123") {
-            this.isShift = !this.isShift;
+            this.isSymbol = true;
+            this.isShift = false;
+            this.render();
+            return;
+        }
+
+        if (key === "ABC") {
+            this.isSymbol = false;
             this.render();
             return;
         }
