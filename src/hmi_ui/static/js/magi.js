@@ -268,6 +268,11 @@ class MagiUI {
                 this.microphoneAccessVerified = true;
                 return true;
             } catch (error) {
+                if (error?.name === "NotFoundError") {
+                    // A Pi without an ALSA capture device must remain usable by text.
+                    setVoiceState("MICRÓFONO NO DETECTADO - MODO TEXTO ACTIVO", "error");
+                    return false;
+                }
                 setVoiceState(`ERROR DE MICROFONO: ${error.name}: ${error.message}`, "error");
                 return false;
             }
@@ -309,6 +314,10 @@ class MagiUI {
                 this.shouldRestartRecognition = false;
                 this.isRecording = false;
                 this.recognitionStopReason = "error";
+                if (event.error === "not-allowed" || event.error === "audio-capture") {
+                    setVoiceState("MICRÓFONO NO DETECTADO - MODO TEXTO ACTIVO", "error");
+                    return;
+                }
                 setVoiceState(`ERROR EN STT: ${event.error.toUpperCase()}${event.message ? `: ${event.message}` : ""}`, "error");
             };
             this.speechRecognition.onstart = () => {
@@ -395,33 +404,17 @@ class MagiUI {
     speakMagi(text) {
         if (!text) return;
 
-        // Una sola ruta de audio: navegador si existe, backend solo como fallback.
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // Detener locución previa
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = "es-ES";
-            utterance.rate = 1.6;  // Acelerada (1.5x - 1.75x estilo Evangelion)
-            utterance.pitch = 1.25; // Tono andrógino / sintético
-
-            // Buscar voz adecuada si está disponible en Chromium
-            const voices = window.speechSynthesis.getVoices();
-            const esVoice = voices.find(v => v.lang.startsWith("es") || v.name.toLowerCase().includes("spanish"));
-            if (esVoice) utterance.voice = esVoice;
-
-            window.speechSynthesis.speak(utterance);
-            return;
-        }
-
-        // Servidor Backend Core 1 (aplay / espeak-ng) cuando Chromium no sintetiza.
+        // Force synthesis on the Pi so MAGI uses its physical HDMI/jack route.
         try {
             fetch("/api/audio/tts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: text, rate: 1.6, pitch: 1.25 })
-            }).catch(() => {});
+            }).then(response => {
+                if (!response.ok) console.warn("MAGI backend TTS failed", response.status);
+            }).catch(error => console.warn("MAGI backend TTS unavailable", error));
         } catch (e) {
-            // Silent catch
+            console.warn("MAGI backend TTS unavailable", e);
         }
     }
 
