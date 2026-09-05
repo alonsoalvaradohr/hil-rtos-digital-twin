@@ -269,3 +269,43 @@ Clasificación: `MOCK/STATIC PASS` exclusivamente. Los resultados demuestran en 
 
 **Estado posterior al segundo pivote:** `SIN EVIDENCIA SUFICIENTE` para operación o despliegue. Continúan pendientes la autorización explícita de deploy, la verificación remota completa, BlueZ y NetworkManager reales, el micrófono físico, STT/TTS audible, OSK/touch en ttyd y los servicios systemd sobre Raspberry Pi.
 
+### 11.11 Ejecución física Fase 11.3 — 2026-09-04
+
+Target efectivo de recuperación: `alonso@192.168.100.30` (`AlonsoRTOS`). El enlace directo `192.168.4.2` no aceptó SSH durante esta sesión; no se lo presenta como validado. Las transferencias se realizaron con `scp` nativo y los mandatos se ejecutaron con `ssh` nativo.
+
+```text
+$ ssh alonso@192.168.100.30 "nmcli dev wifi list"
+IN-USE  BSSID              SSID      MODE   CHAN  RATE        SIGNAL  BARS  SECURITY
+*       98:1A:35:8E:D3:B4  LUANA 5G  Infra  149   270 Mbit/s  45      ▂▄__  WPA2
+
+$ sudo bluetoothctl --timeout 3 discoverable on && bluetoothctl show
+Changing discoverable on succeeded
+Controller 88:A2:9E:57:F8:5F (public)
+Name: AlonsoRTOS
+Powered: yes
+PowerState: on
+Discoverable: yes
+DiscoverableTimeout: 0x000000b4 (180)
+Pairable: no
+Discovering: no
+
+$ arecord -l && aplay -l
+**** List of CAPTURE Hardware Devices ****
+**** List of PLAYBACK Hardware Devices ****
+card 0: vc4hdmi0 [vc4-hdmi-0], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+$ ls -l /dev/input/event*
+crw-rw----+ 1 root input 13, 64 Sep  4 15:32 /dev/input/event0
+crw-rw----+ 1 root input 13, 65 Sep  4 15:32 /dev/input/event1
+crw-rw----+ 1 root input 13, 66 Sep  4 15:32 /dev/input/event2
+crw-rw----+ 1 root input 13, 67 Sep  4 15:32 /dev/input/event3
+crw-rw----+ 1 root input 13, 68 Sep  4 15:32 /dev/input/event4
+crw-rw----+ 1 root input 13, 69 Sep  4 15:32 /dev/input/event5
+crw-rw----+ 1 root input 13, 70 Sep  4 15:32 /dev/input/event6
+crw-rw----+ 1 root input 13, 71 Sep  4 15:32 /dev/input/event7
+```
+
+El verificador remoto confirmó `seatd`, `magi-ui` y `magi-kiosk` activos, `QDtech MPI7003`, `WLR_BACKENDS=drm,libinput` y Chromium con `--use-fake-ui-for-media-stream` y el origen local seguro. Su certificación de voz siguió fallando únicamente por `HIL_OPERATOR_CONFIRMED=no`; el inventario ALSA expone cero dispositivos de captura, por lo que no se certifica STT físico. El intento físico de pair con `AlonsoMobileArmor` devolvió `org.bluez.Error.AuthenticationFailed` tras el desafío de passkey; queda pendiente confirmación del teléfono.
+

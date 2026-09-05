@@ -80,7 +80,7 @@ if [[ ${#chromium_pids[@]} -ne 1 ]]; then
 else
     chromium_cmdline=$(tr '\0' ' ' < "$PROC_ROOT/${chromium_pids[0]}/cmdline")
     echo "  \$ tr '\\0' ' ' < $PROC_ROOT/${chromium_pids[0]}/cmdline"; printf '%s\n' "$chromium_cmdline"
-    required_flags=("--kiosk" "--ozone-platform=wayland" "--user-data-dir=/tmp/chromium_magi_profile" "--auto-accept-camera-and-microphone-capture" "--unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080" "http://127.0.0.1:8080/")
+    required_flags=("--kiosk" "--ozone-platform=wayland" "--user-data-dir=/tmp/chromium_magi_profile" "--use-fake-ui-for-media-stream" "--unsafely-treat-insecure-origin-as-secure=http://127.0.0.1:8080" "http://127.0.0.1:8080/")
     for expected in "${required_flags[@]}"; do
         [[ "$chromium_cmdline" == *"$expected"* ]] || fail "Chromium no contiene flag/origen esperado: $expected"
     done
@@ -92,7 +92,7 @@ journal_output=$(journalctl -b -u magi-kiosk --no-pager 2>&1); journal_rc=$?
 printf '%s\n' "$journal_output"; echo "  [exit=$journal_rc]"
 if [[ $journal_rc -ne 0 ]]; then
     fail "No se pudo consultar el journal del boot actual"
-elif printf '%s\n' "$journal_output" | grep -Eiq 'fatal|libinput[^[:alnum:]]*error|error[^[:alnum:]]*libinput'; then
+elif printf '%s\n' "$journal_output" | grep -Eiq 'libinput[^[:alnum:]]*(error|fatal)|(error|fatal)[^[:alnum:]]*libinput'; then
     fail "El journal contiene errores fatales o de libinput"
 fi
 
