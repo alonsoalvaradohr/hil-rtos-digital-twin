@@ -894,7 +894,7 @@ def api_audio_tts():
             returncode = process.poll()
             if returncode is not None and returncode != 0:
                 return jsonify({"success": False, "error": f"TTS finalizo con codigo {returncode}", "returncode": returncode}), 502
-            return jsonify({"success": True, "engine": tts_cmd[2], "text": text, "pid": process.pid})
+            return jsonify({"success": True, "engine": bin_name, "text": text, "pid": process.pid})
         else:
             return jsonify({"success": False, "error": "No hay motor TTS backend disponible"}), 503
     except Exception as e:
