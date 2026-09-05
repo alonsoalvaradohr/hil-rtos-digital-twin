@@ -1,0 +1,21 @@
+[Unit]
+Description=MAGI Wayland VNC remote console
+After=magi-kiosk.service network-online.target
+Wants=network-online.target
+Requires=magi-kiosk.service
+
+[Service]
+Type=simple
+User=alonso
+Group=alonso
+SupplementaryGroups=vnc
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-0
+ExecStartPre=+/usr/bin/test -S /run/user/1000/wayland-0
+ExecStart=/usr/bin/wayvnc --gpu --render-cursor --config /etc/wayvnc/config 0.0.0.0 5900
+Restart=on-failure
+RestartSec=3
+KillSignal=INT
+
+[Install]
+WantedBy=multi-user.target
