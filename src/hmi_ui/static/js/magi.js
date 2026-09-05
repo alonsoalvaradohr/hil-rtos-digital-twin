@@ -629,11 +629,19 @@ class MagiUI {
             const tempEl = document.getElementById("status-cpu-temp");
             const wifiEl = document.getElementById("status-wifi-ssid");
             const ipEl = document.getElementById("status-ip");
+            const powerEl = document.getElementById("status-power");
             const rtEl = document.getElementById("status-rt-core");
 
             if (tempEl) tempEl.innerText = `${data.cpu_temp} °C`;
             if (wifiEl) wifiEl.innerText = data.wifi_connected ? data.wifi_ssid : "ETH0 DIRECT LINK";
             if (ipEl) ipEl.innerText = data.ip_address;
+            if (powerEl) {
+                const power = data.power || {};
+                const voltage = Number.isFinite(power.core_voltage_v) ? `${power.core_voltage_v.toFixed(3)} V` : "N/D";
+                const current = Number.isFinite(power.current_a) ? `${power.current_a.toFixed(3)} A` : "N/D";
+                const watts = Number.isFinite(power.power_w) ? `${power.power_w.toFixed(3)} W` : "N/D";
+                powerEl.innerText = `VCORE: ${voltage} // I: ${current} // P: ${watts}`;
+            }
             if (rtEl) {
                 rtEl.innerText = data.rt_alive ? "CORE 3 RT ALIVE" : "ACTIVE / CORE 3";
                 rtEl.style.color = data.rt_alive ? "var(--magi-green)" : "var(--magi-orange)";
