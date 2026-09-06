@@ -18,7 +18,7 @@ import signal
 import threading
 import selectors
 from urllib.parse import urlsplit
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from flask import Flask, render_template, jsonify, request, send_from_directory, send_file
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -38,7 +38,11 @@ NETWORK_DEVICE_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 MAGI_MAX_PROMPT_LENGTH = int(os.environ.get("MAGI_MAX_PROMPT_LENGTH", "4000"))
 OSK_EXECUTABLE = "/usr/bin/wvkbd-mobintl"
 OSK_ENVIRONMENT = {"XDG_RUNTIME_DIR": "/run/user/1000", "WAYLAND_DISPLAY": "wayland-0"}
-OSK_ALLOWED_ORIGINS = {"http://127.0.0.1:8080", "http://localhost:8080"}
+OSK_ALLOWED_ORIGINS = {
+    "http://127.0.0.1:8080", "http://localhost:8080",
+    "http://127.0.0.1:8088", "http://localhost:8088",
+    "http://127.0.0.1:6080", "http://localhost:6080"
+}
 _osk_lock = threading.Lock()
 _osk_process = None
 _osk_pid = None
@@ -532,7 +536,7 @@ def _bluetooth_pair_transaction(mac, passkey=None, confirm=None, timeout=BLUETOO
 
 
 def _request_is_local(remote_addr, origin):
-    """Acepta únicamente clientes loopback y, cuando existe, un Origin kiosk exacto."""
+    """Acepta únicamente clientes loopback y, cuando existe, un Origin kiosk o túnel global autorizado."""
     try:
         if not ipaddress.ip_address(remote_addr or "").is_loopback:
             return False
@@ -542,7 +546,16 @@ def _request_is_local(remote_addr, origin):
         return True
     parsed = urlsplit(origin)
     normalized = f"{parsed.scheme}://{parsed.netloc}"
-    return parsed.path in {"", "/"} and not parsed.query and not parsed.fragment and normalized in OSK_ALLOWED_ORIGINS
+    if normalized in OSK_ALLOWED_ORIGINS:
+        return True
+    host = parsed.netloc.lower()
+    allowed_suffixes = (
+        ".trycloudflare.com", ".pinggy.net", ".pinggy-free.link", ".pinggy.io",
+        ".ngrok-free.app", ".ngrok.io"
+    )
+    if any(host.endswith(sfx) for sfx in allowed_suffixes):
+        return True
+    return False
 
 
 def _require_local_request():
@@ -940,16 +953,53 @@ def api_audio_tts():
                 break
 
         if tts_cmd:
-            process = subprocess.Popen(tts_cmd)
-            time.sleep(0.05)
-            returncode = process.poll()
-            if returncode is not None and returncode != 0:
-                return jsonify({"success": False, "error": f"TTS finalizo con codigo {returncode}", "returncode": returncode}), 502
-            return jsonify({"success": True, "engine": bin_name, "text": text, "pid": process.pid})
+            # Sintetizar a archivo WAV para streaming remoto al altavoz del operador
+            wav_path = "/tmp/magi_last_speech.wav"
+            wav_cmd = ["taskset", "-c", "1", bin_name, "-v", "es", "-s", str(speech_rate), "-p", str(speech_pitch), "-w", wav_path, text]
+            subprocess.run(wav_cmd, capture_output=True, timeout=5)
+
+            # Reproducir simultáneamente en los altavoces físicos de la Pi
+            process = subprocess.Popen(["taskset", "-c", "1", "aplay", "-D", "default", wav_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return jsonify({"success": True, "engine": bin_name, "text": text, "audio_url": "/api/audio/last_tts.wav", "pid": process.pid})
         else:
             return jsonify({"success": False, "error": "No hay motor TTS backend disponible"}), 503
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/audio/last_tts.wav")
+def api_audio_last_tts():
+    """Entrega el último audio sintetizado por MAGI para reproducción en altavoz remoto."""
+    wav_path = "/tmp/magi_last_speech.wav"
+    if os.path.exists(wav_path):
+        resp = send_file(wav_path, mimetype="audio/wav")
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        return resp
+    return jsonify({"error": "No audio available"}), 404
+
+@app.route("/api/audio/stream", methods=["POST"])
+def api_audio_stream():
+    """Recibe fragmentos de audio PCM 16-bit 16kHz del micrófono remoto y los inyecta en el loopback ALSA."""
+    denied = _require_local_request()
+    if denied:
+        return denied
+    audio_data = request.get_data()
+    if not audio_data:
+        return jsonify({"success": False, "error": "Datos de audio vacíos"}), 400
+    try:
+        proc = subprocess.Popen(
+            ["taskset", "-c", "1", "aplay", "-D", "plughw:1,0", "-f", "S16_LE", "-r", "16000", "-c", "1", "-q"],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        proc.communicate(input=audio_data, timeout=2.0)
+        return jsonify({"success": True, "bytes_received": len(audio_data)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/mirror")
+def view_mirror():
+    """Página del Espejo Sensorial Global MAGI (Inmersión Total Video + Control + Audio)."""
+    return render_template("mirror.html")
 
 @app.route("/api/wifi/scan")
 def api_wifi_scan():
