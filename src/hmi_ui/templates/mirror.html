@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es" class="notranslate" translate="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAGI SYSTEM // ESPEJO GLOBAL ZERO-TRUST (FASE 13)</title>
+    <link rel="stylesheet" href="/static/css/magi.css">
+    <style>
+        :root {
+            --eva-bg: #07080a;
+            --eva-panel: rgba(14, 17, 24, 0.95);
+            --eva-orange: #FF9900;
+            --eva-green: #00FF66;
+            --eva-red: #FF3333;
+            --eva-purple: #8800FF;
+            --eva-border: #FF9900;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--eva-bg);
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            color: var(--eva-orange);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top HUD Bar */
+        #mirror-hud {
+            background: var(--eva-panel);
+            border-bottom: 2px solid var(--eva-border);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .hud-left, .hud-center, .hud-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hud-tag {
+            background: #FF9900;
+            color: #000;
+            font-weight: bold;
+            padding: 2px 6px;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        .hud-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #FFF;
+            letter-spacing: 1px;
+        }
+
+        /* View mode switchers */
+        .btn-view-mode {
+            background: #151820;
+            border: 1px solid #FF9900;
+            color: #FF9900;
+            padding: 5px 10px;
+            font-size: 11px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .btn-view-mode.active {
+            background: #FF9900;
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 10px rgba(255, 153, 0, 0.5);
+        }
+
+        .btn-view-mode:hover:not(.active) {
+            background: #252a35;
+            color: #FFF;
+        }
+
+        /* Audio Bar */
+        #audio-hud-bar {
+            background: rgba(10, 12, 16, 0.95);
+            border-bottom: 1px solid #333;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+
+        .audio-btn {
+            background: #111;
+            border: 1px solid var(--eva-green);
+            color: var(--eva-green);
+            padding: 6px 14px;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .audio-btn.recording {
+            background: var(--eva-red);
+            border-color: #FFF;
+            color: #FFF;
+            animation: pulse-red 1s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            from { box-shadow: 0 0 5px var(--eva-red); }
+            to { box-shadow: 0 0 18px var(--eva-red); }
+        }
+
+        #audio-vu-meter {
+            width: 120px;
+            height: 16px;
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 2px;
+        }
+
+        .hud-transcript-box {
+            flex: 1;
+            min-width: 200px;
+            background: #0d0f14;
+            border: 1px solid #444;
+            color: #00FF66;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btn-dispatch {
+            background: #FF9900;
+            border: none;
+            color: #000;
+            padding: 6px 12px;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            letter-spacing: 1px;
+        }
+
+        .btn-dispatch:hover {
+            background: #ffaa22;
+        }
+
+        /* Content Container */
+        #content-frame-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #000;
+        }
+
+        iframe.mirror-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+
+        iframe.mirror-frame.active {
+            display: block;
+        }
+
+        /* Notification overlay */
+        #magi-overlay-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--eva-green);
+            color: var(--eva-green);
+            padding: 10px 16px;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+            letter-spacing: 1px;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top HUD -->
+    <header id="mirror-hud">
+        <div class="hud-left">
+            <span class="hud-tag">NERV // GLOBAL</span>
+            <span class="hud-title">MAGI INMERSIÓN SENSORIAL TOTAL</span>
+            <span id="conn-badge" style="color: var(--eva-green); font-size: 11px;">● ZERO-TRUST HTTPS</span>
+        </div>
+
+        <div class="hud-center">
+            <button id="btn-show-vnc" class="btn-view-mode active" onclick="switchView('vnc')">
+                🖥️ ESPEJO EN VIVO (VIDEO & TOUCH)
+            </button>
+            <button id="btn-show-hmi" class="btn-view-mode" onclick="switchView('hmi')">
+                📊 HMI NATIVO MAGI
+            </button>
+            <button id="btn-show-terminal" class="btn-view-mode" onclick="switchView('terminal')">
+                💻 TERMINAL BALTHASAR
+            </button>
+        </div>
+
+        <div class="hud-right">
+            <span id="live-time" style="color: #888; font-size: 11px;">--:--:-- UTC</span>
+            <button class="btn-view-mode" onclick="toggleFullscreen()" style="padding: 4px 8px;">⛶ PANTALLA COMPLETA</button>
+        </div>
+    </header>
+
+    <!-- Audio Passthrough HUD -->
+    <div id="audio-hud-bar">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-mic-ptt" class="audio-btn">
+                <span id="mic-icon">🎙️</span>
+                <span id="mic-label">HOLD PTT (HABLAR)</span>
+            </button>
+            <button id="btn-mic-stream" class="audio-btn" onclick="toggleContinuousStream()">
+                <span>📡</span>
+                <span id="stream-label">STREAM CONTINUO MIC</span>
+            </button>
+            <canvas id="audio-vu-meter"></canvas>
+        </div>
+
+        <div class="hud-transcript-box" id="transcript-display">
+            [DICTADO POR VOZ]: En espera de directiva táctica...
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;">
+                <input type="checkbox" id="chk-remote-speaker" checked>
+                <span>ALTAVOZ CELULAR ACTIVO</span>
+            </label>
+            <button class="btn-dispatch" onclick="dispatchCurrentPrompt()">
+                ⚡ DISPATCH AGY
+            </button>
+        </div>
+    </div>
+
+    <!-- View Containers -->
+    <main id="content-frame-container">
+        <!-- View 1: noVNC Live Mirror -->
+        <iframe id="frame-vnc" class="mirror-frame active" src="/vnc/vnc_lite.html?autoconnect=true&resize=scale&reconnect=true"></iframe>
+        
+        <!-- View 2: Direct MAGI HMI -->
+        <iframe id="frame-hmi" class="mirror-frame" src="/"></iframe>
+
+        <!-- View 3: ttyd Terminal -->
+        <iframe id="frame-terminal" class="mirror-frame" src="/terminal/"></iframe>
+    </main>
+
+    <div id="magi-overlay-toast"></div>
+
+    <script>
+        // Reloj en vivo
+        setInterval(() => {
+            document.getElementById('live-time').textContent = new Date().toISOString().substring(11, 19) + ' UTC';
+        }, 1000);
+
+        function showToast(msg, duration = 3000) {
+            const toast = document.getElementById('magi-overlay-toast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, duration);
+        }
+
+        // Cambio de vistas
+        function switchView(viewName) {
+            document.querySelectorAll('.btn-view-mode').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.mirror-frame').forEach(f => f.classList.remove('active'));
+
+            if (viewName === 'vnc') {
+                document.getElementById('btn-show-vnc').classList.add('active');
+                document.getElementById('frame-vnc').classList.add('active');
+            } else if (viewName === 'hmi') {
+                document.getElementById('btn-show-hmi').classList.add('active');
+                document.getElementById('frame-hmi').classList.add('active');
+            } else if (viewName === 'terminal') {
+                document.getElementById('btn-show-terminal').classList.add('active');
+                document.getElementById('frame-terminal').classList.add('active');
+            }
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => alert(err.message));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        // ====================================================================
+        // AUDIO PASSTHROUGH (MICRÓFONO REMOTO -> SND-ALOOP & STT DE LA PI)
+        // ====================================================================
+        let audioContext = null;
+        let mediaStream = null;
+        let scriptProcessor = null;
+        let isStreamingMic = false;
+        let speechRecognition = null;
+        let currentTranscript = "";
+        let vuCanvas = document.getElementById('audio-vu-meter');
+        let vuCtx = vuCanvas.getContext('2d');
+
+        async function initAudio() {
+            if (audioContext && mediaStream) return true;
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
+                });
+
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(mediaStream);
+
+                // ScriptProcessor para volcar PCM a 16kHz al loopback de la Pi
+                scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 64;
+
+                source.connect(analyser);
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+
+                // Dibujar VU-Meter
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                function drawVU() {
+                    requestAnimationFrame(drawVU);
+                    analyser.getByteFrequencyData(dataArray);
+                    vuCtx.fillStyle = '#0a0b0e';
+                    vuCtx.fillRect(0, 0, vuCanvas.width, vuCanvas.height);
+                    let sum = 0;
+                    for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+                    let avg = sum / bufferLength;
+                    let barWidth = (avg / 255) * vuCanvas.width;
+                    vuCtx.fillStyle = isStreamingMic ? '#FF3333' : '#00FF66';
+                    vuCtx.fillRect(0, 0, barWidth, vuCanvas.height);
+                }
+                drawVU();
+
+                // Streaming PCM a la Pi
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isStreamingMic) return;
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    // Convertir float32 a Int16 PCM
+                    const pcm16 = new Int16Array(inputData.length);
+                    for (let i = 0; i < inputData.length; i++) {
+                        let s = Math.max(-1, Math.min(1, inputData[i]));
+                        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    }
+
+                    // Enviar buffer binario al endpoint de streaming ALSA
+                    fetch('/api/audio/stream', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/octet-stream' },
+                        body: pcm16.buffer
+                    }).catch(err => console.debug('Audio stream drop', err));
+                };
+
+                // Inicializar SpeechRecognition para texto simultáneo
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    speechRecognition = new SpeechRecognition();
+                    speechRecognition.continuous = true;
+                    speechRecognition.interimResults = true;
+                    speechRecognition.lang = 'es-ES';
+                    speechRecognition.onresult = (evt) => {
+                        let text = '';
+                        for (let i = evt.resultIndex; i < evt.results.length; ++i) {
+                            text += evt.results[i][0].transcript;
+                        }
+                        currentTranscript = text.trim();
+                        document.getElementById('transcript-display').textContent = '[DIRECTIVA VOZ]: ' + currentTranscript;
+                    };
+                    speechRecognition.onerror = (e) => console.warn('SpeechRec Error:', e.error);
+                }
+
+                showToast('✅ MICRÓFONO CONECTADO AL LOOPBACK ALSA');
+                return true;
+            } catch (err) {
+                console.error('Audio init error:', err);
+                showToast('⚠️ ERROR AL INICIAR MICRÓFONO: ' + err.message);
+                return false;
+            }
+        }
+
+        async function startMicCapture() {
+            if (!(await initAudio())) return;
+            if (audioContext.state === 'suspended') await audioContext.resume();
+            isStreamingMic = true;
+            if (speechRecognition) {
+                try { speechRecognition.start(); } catch(e){}
+            }
+            document.getElementById('btn-mic-ptt').classList.add('recording');
+            document.getElementById('mic-label').textContent = 'TRANSMITIENDO VOZ...';
+        }
+
+        function stopMicCapture() {
+            isStreamingMic = false;
+            if (speechRecognition) {
+                try { speechRecognition.stop(); } catch(e){}
+            }
+            document.getElementById('btn-mic-ptt').classList.remove('recording');
+            document.getElementById('mic-label').textContent = 'HOLD PTT (HABLAR)';
+        }
+
+        function toggleContinuousStream() {
+            if (isStreamingMic) {
+                stopMicCapture();
+                document.getElementById('btn-mic-stream').classList.remove('recording');
+                document.getElementById('stream-label').textContent = 'STREAM CONTINUO MIC';
+                showToast('🛑 TRANSMISIÓN DE VOZ DETENIDA');
+            } else {
+                startMicCapture();
+                document.getElementById('btn-mic-stream').classList.add('recording');
+                document.getElementById('stream-label').textContent = 'TRANSMITIENDO EN VIVO';
+                showToast('🎙️ TRANSMITIENDO MICRÓFONO AL LOOPBACK DE LA PI');
+            }
+        }
+
+        // Configuración de botones PTT (mouse y táctil)
+        const btnPtt = document.getElementById('btn-mic-ptt');
+        btnPtt.addEventListener('mousedown', (e) => { e.preventDefault(); startMicCapture(); });
+        window.addEventListener('mouseup', () => { if (!document.getElementById('btn-mic-stream').classList.contains('recording')) stopMicCapture(); });
+        btnPtt.addEventListener('touchstart', (e) => { e.preventDefault(); startMicCapture(); });
+        window.addEventListener('touchend', () => { if (!document.getElementById('btn-mic-stream').classList.contains('recording')) stopMicCapture(); });
+
+        // Dispatch de prompt a AntiGravity
+        async function dispatchCurrentPrompt() {
+            const prompt = currentTranscript || prompt("Ingrese directiva para AntiGravity CLI:");
+            if (!prompt) return;
+
+            showToast('⚡ DISPARANDO DIRECTIVA A BALTHASAR...');
+            try {
+                const res = await fetch('/api/agy/dispatch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ DELIBERACIÓN MAGI CONCLUIDA: ' + (data.consensus || 'OK'));
+                    // Si el altavoz remoto está activo, reproducir TTS generado
+                    if (document.getElementById('chk-remote-speaker').checked) {
+                        playRemoteSpeaker();
+                    }
+                } else {
+                    showToast('⚠️ ERROR: ' + (data.error || 'Deliberación rechazada'));
+                }
+            } catch (err) {
+                showToast('❌ ERROR AL CONECTAR: ' + err.message);
+            }
+        }
+
+        // Reproducir audio TTS de la Pi en el altavoz del celular
+        function playRemoteSpeaker() {
+            const audioUrl = '/api/audio/last_tts.wav?t=' + Date.now();
+            const audio = new Audio(audioUrl);
+            audio.play().then(() => {
+                showToast('🔊 REPRODUCIENDO RESPUESTA EN ALTAVOZ DEL CELULAR');
+            }).catch(e => {
+                console.warn('Auto-play blocked, click to enable audio', e);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -7,6 +7,21 @@
 
 ---
 
+## 🌐 CENTRO DE MANDO GLOBAL (QUICK ACCESS)
+
+> **ACCESO OPERACIONAL ZERO-TRUST Y PASSTHROUGH SENSORIAL TOTAL**  
+> Enlaces directos de alta disponibilidad para supervisión, telemetría táctica, consola remota y control sensorial bidireccional desde cualquier red global sin apertura de puertos.
+
+| Subsistema | Enlace Directo | Descripción Operacional |
+| :--- | :--- | :--- |
+| **MAGI HMI Nativo** | [Acceder a MAGI HMI](https://magi-tunnel.example.org/) | Interfaz base táctica Evangelion pura de 1024x600. Ideal para supervisión de telemetría y control táctil. |
+| **Inmersión Sensorial Total** | [Acceder a Espejo Sensorial](https://magi-tunnel.example.org/mirror) | HUD de inmersión completa: streaming de video Wayland, control de puntero/teclado, micrófono remoto (PCM 16 kHz hacia ALSA loopback) y altavoz WebRTC. |
+| **Terminal Zero-Trust** | [Acceder a Terminal Web](https://magi-tunnel.example.org/terminal/) | Consola interactiva `ttyd` / Bash integrada directamente en el navegador, protegida por túnel TLS 1.3. |
+| **noVNC Puro** | [Acceder a noVNC Kiosk](https://magi-tunnel.example.org/vnc/vnc_lite.html) | Espejo de pantalla completa de bajo nivel sobre el compositor Wayland (`wayvnc` + `websockify`). Diagnóstico del escritorio en bruto. |
+| **Enlace SSH Global** | `ssh -p 6 user-host` | Túnel TCP inverso para administración remota por terminal SSH (autenticación mediante clave Ed25519). |
+
+---
+
 ## 1. Visión Holística del Proyecto (Zero to Hero)
 
 El proyecto **HIL-RTOS Digital Twin & Real-Time Hypervisor** es una plataforma de ingeniería avanzada para la simulación, validación en tiempo real y emulación en bucle cerrado (*Hardware-in-the-Loop*) de sistemas ciberfísicos críticos. El banco de pruebas está diseñado para albergar modelos de plantas de potencia, control vectorial de servomotores, actuadores aeroespaciales e instrumentación automotriz en un entorno con determinismo temporal absoluto.

@@ -1,5 +1,22 @@
 # MASTER REPOSITORY: HIL-RTOS DIGITAL TWIN & REAL-TIME HYPERVISOR
 
+---
+
+## 🌐 CENTRO DE MANDO GLOBAL (QUICK ACCESS)
+
+> **ACCESO OPERACIONAL ZERO-TRUST Y PASSTHROUGH SENSORIAL TOTAL**  
+> Enlaces directos de alta disponibilidad para supervisión, telemetría táctica, consola remota y control sensorial bidireccional desde cualquier red global sin apertura de puertos.
+
+| Subsistema | Enlace Directo | Descripción Operacional |
+| :--- | :--- | :--- |
+| **MAGI HMI Nativo** | [Acceder a MAGI HMI](https://magi-tunnel.example.org/) | Interfaz base táctica Evangelion pura de 1024x600. Ideal para supervisión de telemetría y control táctil. |
+| **Inmersión Sensorial Total** | [Acceder a Espejo Sensorial](https://magi-tunnel.example.org/mirror) | HUD de inmersión completa: streaming de video Wayland, control de puntero/teclado, micrófono remoto (PCM 16 kHz hacia ALSA loopback) y altavoz WebRTC. |
+| **Terminal Zero-Trust** | [Acceder a Terminal Web](https://magi-tunnel.example.org/terminal/) | Consola interactiva `ttyd` / Bash integrada directamente en el navegador, protegida por túnel TLS 1.3. |
+| **noVNC Puro** | [Acceder a noVNC Kiosk](https://magi-tunnel.example.org/vnc/vnc_lite.html) | Espejo de pantalla completa de bajo nivel sobre el compositor Wayland (`wayvnc` + `websockify`). Diagnóstico del escritorio en bruto. |
+| **Enlace SSH Global** | `ssh -p 6 user-host` | Túnel TCP inverso para administración remota por terminal SSH (autenticación mediante clave Ed25519). |
+
+---
+
 ## 1. Visión General del Proyecto
 Este repositorio alberga la infraestructura de software, gobernanza agéntica, herramientas de introspección profunda y el **Gemelo Digital** para el banco de pruebas **Hardware-in-the-Loop (HIL)** basado en **Raspberry Pi 5 (BCM2712 - 4x Cortex-A76)** ejecutando un kernel determinista de tiempo real (**Debian GNU/Linux 13 Trixie / SMP PREEMPT_RT**).
 
