@@ -11,7 +11,35 @@
 
 ---
 
-## Fase 14 — Erradicación de Regresiones Visuales, Telemetría Eléctrica y Persistencia de Túnel
+## Fase 14.1 — Brecha de Red, Despliegue Forzado Físico y Activación de Túnel HTTP/2
+
+**Fecha:** 2026-09-07 UTC  
+**Operador/agente:** `AGENT-PHYSICAL-ENFORCER` (Nivel 14.1)  
+**Commit:** `8235bef` (reemplaza y despliega `58402a3`)  
+**Target:** Raspberry Pi 5 (`AlonsoRTOS` / `fe80::4b3c:e19:bb19:445a%19` / `192.168.4.2` / `192.168.100.30`)
+
+### 14.1.1 Resolución de Brecha de Enlace Físico
+- Vector de entrada: IPv6 Link-Local sobre interfaz Ethernet (`fe80::4b3c:e19:bb19:445a%19`) utilizando el alias SSH preconfigurado `AlonsoRTOS` con llave `id_ed25519_hil`.
+- Estado empírico: Conexión establecida con exit status 0 tras reconexión física de interfaz.
+
+### 14.1.2 Despliegue Forzado SCP a la Raspberry Pi
+Archivos transferidos atómicamente a `/home/alonso/hil_workstation/05_hmi_display/`:
+- `templates/index.html`: Botón MIRROR y emoji 🌐 erradicados. Esquina `SYS // 01` descongestionada.
+- `static/css/magi.css`: `flex-shrink: 0` y protección contra colapso de CSS en cabecera de 1024px.
+- `magi_server.py`: Telemetría eléctrica activa con lectura de VCORE vía `vcgencmd` y modelo estocástico de corriente CPU% (`current_source: cpu_model`).
+- `/home/alonso/extract_magi_url.sh`: Script ejecutable de captura determinista de URL de Cloudflare.
+- `/etc/systemd/system/magi-tunnel.service`: Servicio systemd configurado con `--protocol http2` y `ExecStartPost=/home/alonso/extract_magi_url.sh`.
+
+### 14.1.3 Verificación de Servicios e Inspección Física
+- `magi-ui.service`: `active (running)`.
+- `magi-kiosk.service`: `active (running)`.
+- `magi-tunnel.service`: `active (running)` con protocolo `http2` verificado.
+- `cat /home/alonso/magi_url.txt`: `https://facilitate-diversity-learning-creates.trycloudflare.com` (HTTP 200 verificado desde WAN).
+- Telemetría eléctrica física (`/api/status`):
+  `{"core_voltage_v":0.8914,"current_a":0.791,"current_available":true,"current_source":"cpu_model","power_available":true,"power_w":3.953}`
+- Estabilidad IP: `eth0` fijada como primaria (`192.168.4.2`).
+
+---
 
 **Fecha:** 2026-09-07 UTC  
 **Operador/agente:** `ORCHESTRATOR-SUPREME` (Nivel 14)  
