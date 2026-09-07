@@ -9,6 +9,69 @@
 
 ## Registro de Operaciones y Verificación
 
+---
+
+## Fase 14 — Erradicación de Regresiones Visuales, Telemetría Eléctrica y Persistencia de Túnel
+
+**Fecha:** 2026-09-07 UTC  
+**Operador/agente:** `ORCHESTRATOR-SUPREME` (Nivel 14)  
+**Commit:** `58402a3` | **Tag de rollback:** `pre-cleanup-20260907`  
+**Objetivo:** Corregir tres regresiones críticas: (1) botón MIRROR con emoji prohibido, (2) telemetría eléctrica ausente en header, (3) túnel Cloudflare efímero sin mecanismo de recuperación de URL.
+
+### 14.1 Cambio Atómico 1 — Eliminación de botón MIRROR con emoji prohibido
+
+**Archivo modificado:** `src/hmi_ui/templates/index.html`  
+**Acción:** Eliminado el elemento `<a href="/mirror">🌐 MIRROR</a>` que violaba el estándar SVG-only del proyecto. La ruta `/mirror` sigue accesible como URL web directa.
+
+```diff
+-            <a href="/mirror" target="_blank" class="btn-network-top" ...>
+-                <span>🌐</span> MIRROR
+-            </a>
+             <button id="btn-open-network" class="btn-network-top">
+```
+
+**RC:** 0 (replace_file_content exitoso)  
+**Verificación en Pi:** PENDIENTE — Pi no accesible en el momento de ejecución (192.168.4.2 timeout)
+
+### 14.2 Cambio Atómico 2 — Telemetría eléctrica con estimación CPU%
+
+**Archivo modificado:** `src/hmi_ui/magi_server.py`  
+**Acción:** Ampliar `_read_power_telemetry()`. Si sysfs no expone `current_now`/`power_now` (caso estándar RPi5 sin driver INA3221 activado), calcula estimación desde CPU% y temperatura SoC. Modelo: 0.6A idle + 1.8A * (cpu%/100) + ajuste térmico (+0.1A/10°C sobre 50°C). Nuevo campo `current_source: 'sysfs' | 'cpu_model' | 'none'`.
+
+```
+RC: 0 (replace_file_content exitoso)
+Bytes modificados: ~3500 bytes de función
+Verificación en Pi: PENDIENTE — Pi no accesible
+```
+
+### 14.3 Cambio Atómico 3 — Servicio systemd con captura de URL efímera
+
+**Archivo creado:** `config/systemd/magi-tunnel.service`  
+**Acción:** Servicio nuevo con dos `ExecStartPost` que capturan la URL de Cloudflare del journal y la escriben en `/home/alonso/magi_url.txt`. El operador siempre puede recuperar el link con `ssh alonso@192.168.4.2 "cat ~/magi_url.txt"`.
+
+```ini
+ExecStartPost=/bin/bash -c 'sleep 5; URL=$(journalctl -u magi-tunnel.service ... | grep -oE "https://...trycloudflare.com" | tail -1); ... > /home/alonso/magi_url.txt'
+ExecStartPost=/bin/bash -c 'sleep 20; CUR=$(cat ~/magi_url.txt); [verificar y reintentar si PENDING]'
+```
+
+**RC:** 0 (git add + commit `58402a3`)  
+**Deploy en Pi:** PENDIENTE — requiere que el operador ejecute cuando Pi esté accesible:
+```bash
+scp config/systemd/magi-tunnel.service alonso@192.168.4.2:/tmp/
+ssh alonso@192.168.4.2 "sudo cp /tmp/magi-tunnel.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart magi-tunnel.service"
+ssh alonso@192.168.4.2 "cat ~/magi_url.txt"
+```
+
+### 14.4 Limitaciones de Validación
+
+- **Pi no accesible:** Test-NetConnection a 192.168.4.2:22 resultó en TimedOut. Ningún comando SSH pudo ejecutarse durante esta sesión.
+- **Los cambios en código son verificables localmente** pero el output del `/api/status` con telemetría eléctrica real requiere ejecución en la Pi.
+- **Estado declarado:** `SIN EVIDENCIA SUFICIENTE` para validación completa — cambios preparados y en git, despliegue en Pi pendiente.
+
+---
+
+
+
 | Fase | Estado (PASS/FAIL) | Comando / Acción | Resultado, Retorno y Justificación Técnica |
 | :--- | :--- | :--- | :--- |
 | 0 | *EXITOSO* | `Get-NetIPAddress; Get-NetAdapter; netsh wlan show interfaces` | Salida: rc=0. Identificación de interfaz Ethernet (ifIndex 20, Link 100Mbps, APIPA 169.254.184.179) y Wi-Fi host (`LUANA 5G`, IP 192.168.100.11). Permitió establecer el vector de resolución de red host-target. |
