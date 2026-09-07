@@ -1,17 +1,16 @@
 [Unit]
 Description=MAGI Cloudflare Quick Tunnel (trycloudflare.com -> :8088)
-After=network-online.target magi-ui.service
+After=network-online.target nginx.service magi-ui.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=alonso
 Group=alonso
-ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8088 --no-autoupdate
-ExecStartPost=/bin/bash -c 'sleep 5; URL=$(journalctl -u magi-tunnel.service --no-pager -n 60 2>/dev/null | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1); [ -n "$URL" ] && echo "$URL" > /home/alonso/magi_url.txt || echo PENDING > /home/alonso/magi_url.txt'
-ExecStartPost=/bin/bash -c 'sleep 20; CUR=$(cat /home/alonso/magi_url.txt 2>/dev/null); echo "$CUR" | grep -q trycloudflare && exit 0; URL=$(journalctl -u magi-tunnel.service --no-pager -n 120 2>/dev/null | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1); [ -n "$URL" ] && echo "$URL" > /home/alonso/magi_url.txt || echo ERROR_URL_NOT_FOUND > /home/alonso/magi_url.txt'
-Restart=on-failure
-RestartSec=10
+ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8088 --protocol http2 --no-autoupdate
+ExecStartPost=/home/alonso/extract_magi_url.sh
+Restart=always
+RestartSec=5s
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=magi-tunnel
