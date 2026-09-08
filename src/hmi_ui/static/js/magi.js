@@ -637,10 +637,10 @@ class MagiUI {
             if (ipEl) ipEl.innerText = data.ip_address;
             if (powerEl) {
                 const power = data.power || {};
-                const voltage = Number.isFinite(power.core_voltage_v) ? `${power.core_voltage_v.toFixed(3)} V` : "N/D";
-                const current = Number.isFinite(power.current_a) ? `${power.current_a.toFixed(3)} A` : "N/D";
-                const watts = Number.isFinite(power.power_w) ? `${power.power_w.toFixed(3)} W` : "N/D";
-                powerEl.innerText = `VCORE: ${voltage} // I: ${current} // P: ${watts}`;
+                const vStr = Number.isFinite(power.core_voltage_v) ? `${power.core_voltage_v.toFixed(3)}V` : "N/D";
+                const iStr = Number.isFinite(power.current_a) ? `${power.current_a.toFixed(3)}A` : "N/D";
+                const wStr = Number.isFinite(power.power_w) ? `${power.power_w.toFixed(2)}W` : "N/D";
+                powerEl.innerText = `PWR: ${vStr} / ${iStr} / ${wStr}`;
             }
             if (rtEl) {
                 rtEl.innerText = data.rt_alive ? "CORE 3 RT ALIVE" : "ACTIVE / CORE 3";
