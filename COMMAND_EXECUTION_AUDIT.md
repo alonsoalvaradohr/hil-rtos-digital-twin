@@ -11,7 +11,31 @@
 
 ---
 
-## Fase 14.1 — Brecha de Red, Despliegue Forzado Físico y Activación de Túnel HTTP/2
+## Fase 16 — Corrección Hard-Harness, Rescate de UI y Persistencia Zero-Trust
+
+**Fecha:** 2026-09-07 / 2026-09-08 UTC  
+**Operador/agente:** `AGENT-HARD-HARNESS` (Nivel 16)  
+**Commit:** `3226839`  
+**Target:** Raspberry Pi 5 (`AlonsoRTOS` / `fe80::4b3c:e19:bb19:445a%19` / `192.168.4.2` / `192.168.100.30`)
+
+### 16.1 Diagnóstico Empírico de Desbordamiento de CSS (1024x600)
+- Mediante captura `grim` de Wayland (`wayland-0`), se identificó que `.header-right` sumaba >660px, superando el ancho útil del viewport (1024px) y desplazando el botón `btn-open-network` y parte de `NERV // 02` fuera de la pantalla (`overflow: hidden`).
+- **Corrección aplicada:**
+  - Reducción de fuentes y paddings en `magi.css` (altura cabecera de 64px a 58px).
+  - Compactación de `.header-tech-info` a 3 líneas balanceadas.
+  - Compactación de telemetría de potencia a formato `PWR: X.XXXV / Y.YYYA / Z.ZZW`.
+  - Verificación fotográfica `kiosk_screen_fixed.png`: botón NETWORK y NERV // 02 100% visibles y con márgenes limpios.
+
+### 16.2 Resolución de Error 1033 (Cloudflare Tunnel)
+- Diagnóstico: `wlan0` sufría pérdida de paquetes hacia el router Wi-Fi (`192.168.100.1:53`), causando timeouts en la resolución DNS y cierre de conexiones con Cloudflare Edge.
+- Corrección:
+  - Reasociación a red 2.4GHz `LUANA` con señal óptima (65 dBm).
+  - Adición de resolutores públicos `1.1.1.1` y `8.8.8.8` en `/etc/resolv.conf`.
+  - Configuración determinista de `magi-tunnel.service` apuntando a `http://127.0.0.1:8088`.
+  - Captura y persistencia de URL en `/home/alonso/magi_url.txt`.
+- URL activa verificada: `https://fixtures-blast-sarah-istanbul.trycloudflare.com` (HTTP 200 OK en `/`, `/mirror`, `/api/status`, `/vnc/`, `/terminal/`).
+
+---
 
 **Fecha:** 2026-09-07 UTC  
 **Operador/agente:** `AGENT-PHYSICAL-ENFORCER` (Nivel 14.1)  
