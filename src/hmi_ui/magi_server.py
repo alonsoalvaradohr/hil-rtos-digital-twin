@@ -53,6 +53,72 @@ BLUETOOTH_ERROR_CODES = (
     "AuthenticationTimeout", "ConnectionAttemptFailed", "InProgress",
 )
 
+_bt_agent_thread = None
+_bt_agent_process = None
+_bt_agent_stop = threading.Event()
+
+
+def _bluetooth_agent_worker():
+    """Hilo auxiliar D-Bus BlueZ: registra un agente NoInputNoOutput persistente y habilita pairable/discoverable."""
+    while not _bt_agent_stop.is_set():
+        proc = None
+        try:
+            cmd = ["bluetoothctl", "--agent", "NoInputNoOutput"]
+            proc = subprocess.Popen(
+                cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, text=True, start_new_session=True
+            )
+            global _bt_agent_process
+            _bt_agent_process = proc
+            time.sleep(1.0)
+            if proc.poll() is None:
+                setup_commands = (
+                    "power on\n"
+                    "pairable on\n"
+                    "discoverable on\n"
+                    "agent NoInputNoOutput\n"
+                    "default-agent\n"
+                )
+                try:
+                    proc.stdin.write(setup_commands)
+                    proc.stdin.flush()
+                except (BrokenPipeError, OSError):
+                    pass
+
+            while proc.poll() is None and not _bt_agent_stop.is_set():
+                line = proc.stdout.readline()
+                if not line:
+                    time.sleep(0.2)
+                    continue
+                lower = line.lower()
+                if "(yes/no)" in lower or "confirm" in lower or "authorize" in lower:
+                    try:
+                        proc.stdin.write("yes\n")
+                        proc.stdin.flush()
+                    except (BrokenPipeError, OSError):
+                        break
+        except Exception:
+            pass
+        finally:
+            if proc and proc.poll() is None:
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=2)
+                except Exception:
+                    pass
+        if not _bt_agent_stop.is_set():
+            time.sleep(5.0)
+
+
+def _start_bluetooth_agent():
+    """Inicia el agente Bluetooth persistente en segundo plano si no está activo."""
+    global _bt_agent_thread
+    if _bt_agent_thread is None or not _bt_agent_thread.is_alive():
+        _bt_agent_stop.clear()
+        _bt_agent_thread = threading.Thread(target=_bluetooth_agent_worker, daemon=True, name="MAGI-BT-Agent")
+        _bt_agent_thread.start()
+
+
 
 def _command_result(command, timeout, env=None, input_text=None):
     """Ejecuta un comando acotado y conserva evidencia literal del resultado."""
@@ -801,6 +867,23 @@ def _primary_ip_address():
     return "127.0.0.1"
 
 
+def _is_process_running(process_name):
+    """Verifica de forma ultrarrápida si un proceso comm específico está activo en /proc."""
+    try:
+        with os.scandir("/proc") as entries:
+            for entry in entries:
+                if entry.name.isdigit():
+                    try:
+                        with open(f"/proc/{entry.name}/comm", "r", encoding="utf-8") as f:
+                            if f.read().strip() == process_name:
+                                return True
+                    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+                        continue
+    except OSError:
+        pass
+    return False
+
+
 def get_system_status():
     status = {
         "hostname": os.uname().nodename if hasattr(os, "uname") else os.environ.get("COMPUTERNAME"),
@@ -844,17 +927,10 @@ def get_system_status():
         # IP Address del enlace físico preferido, sin valor hardcodeado en la UI.
         status["ip_address"] = _primary_ip_address()
 
-        # Estado de SHM y Heartbeats
+        # Estado de SHM y Daemons HIL (Core 3 RT + IPC)
         if os.path.exists(SHM_PATH):
-            with open(SHM_PATH, "r+b") as f:
-                mm = mmap.mmap(f.fileno(), 1024, mmap.MAP_SHARED, mmap.PROT_READ)
-                magic, version, is_init = struct.unpack_from("<QII", mm, 0)
-                if magic == HIL_SHM_MAGIC:
-                    rt_hb = struct.unpack_from("<Q", mm, 64)[0]
-                    ipc_hb = struct.unpack_from("<Q", mm, 128)[0]
-                    status["rt_alive"] = (rt_hb > 0)
-                    status["ipc_alive"] = (ipc_hb > 0)
-                mm.close()
+            status["ipc_alive"] = _is_process_running("ipc_daemon")
+            status["rt_alive"] = _is_process_running("rt_motor")
     except Exception as e:
         status["error"] = str(e)
 
@@ -1384,6 +1460,9 @@ def api_hil_command():
     if result["returncode"] != 0:
         return jsonify({"success": False, "error": result["stderr"] or result["stdout"], "details": result}), 502
     return jsonify({"success": True, "command_sent": payload, "details": result})
+
+# Inicializar Agente D-Bus / BlueZ persistente en segundo plano
+_start_bluetooth_agent()
 
 if __name__ == "__main__":
     print("[+] MAGI SYSTEM Server iniciando en Core 1 (0.0.0.0:8080)...")

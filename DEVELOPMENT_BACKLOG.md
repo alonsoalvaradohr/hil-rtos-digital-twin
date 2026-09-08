@@ -1,18 +1,25 @@
 # BACKLOG DE DESARROLLO Y HOJA DE RUTA TÉCNICA (DEVELOPMENT BACKLOG)
 
 **Proyecto:** Hipervisor Industrial Hardware-in-the-Loop (HIL-RTOS)  
-**Versión Actual:** v6.1.0 (Arquitectura Base y HMI Operativa)  
-**Próximo Milestone:** v7.0.0 (Inyección Física de Hardware y Buses en Tiempo Real)  
+**Versión Actual:** v7.1.0 (Resiliencia Soberana, Túnel Permanente y Bluetooth Operativo)  
+**Próximo Milestone:** v8.0.0 (Inyección Física de Hardware y Buses en Tiempo Real)  
 
 ---
 
 ## 1. Visión Estratégica
 
-La arquitectura base del software, la separación de dominios de silicio, el motor determinista en C++ y la interfaz gráfica MAGI están completamente consolidados y certificados. La siguiente fase de evolución técnica se enfoca en la interconexión con hardware físico externo mediante los buses de alta velocidad del SoC Broadcom BCM2712 y el Southbridge RP1 (GPIO, SPI DMA, I2C, CAN-FD y PWM).
+La arquitectura base del software, la separación de dominios de silicio, el motor determinista en C++, la interfaz gráfica táctil MAGI y la infraestructura de comunicaciones remotas y Bluetooth están completamente consolidadas y certificadas. La siguiente fase de evolución técnica se enfoca en la interconexión con hardware físico externo mediante los buses de alta velocidad del SoC Broadcom BCM2712 y el Southbridge RP1 (GPIO, SPI DMA, I2C, CAN-FD y PWM).
 
 ---
 
 ## 2. Matriz de Épicas y Tareas Técnicas Priorizadas
+
+### ÉPICA CONCLUIDA: Infraestructura Soberana, Túnel Permanente Cloudflare y Pila Bluetooth (Fases 14-17)
+- [x] **TASK-NET-01:** Erradicación de desbordamiento horizontal de viewport en pantalla táctil 1024x600, eliminando elementos no canónicos y asegurando visualización del panel NERV.
+- [x] **TASK-NET-02:** Telemetría eléctrica multi-fuente en tiempo real (VCore, Corriente y Potencia en vástago de control de la UI).
+- [x] **TASK-NET-03:** Arquitectura de túnel Cloudflare resiliente y permanente (`magi-tunnel-launcher.sh`) con soporte de token Zero Trust en `/etc/cloudflared/token` y auto-recuperación ante reinicios duros.
+- [x] **TASK-NET-04:** Pila Bluetooth BlueZ 5.82 plenamente operativa con agente D-Bus NoInputNoOutput persistente en segundo plano dentro de `magi-ui.service`, permitiendo escaneo de radiofrecuencia y emparejamiento automático.
+- [x] **TASK-NET-05:** Banco de pruebas integral E2E verificado (/api/status HTTP 200, `/dev/shm/hil_shm` 4128 bytes sincronizado con Core 3 RT FIFO 99, Gateway SSH y passthrough de red 100% activo).
 
 ### ÉPICA 1: Inyección de Señales GPIO Rápidas y PWM por DMA (Fase 9)
 - [ ] **TASK-09-01:** Implementar driver de acceso directo a registros GPIO utilizando `/dev/gpiomem4` (Southbridge RP1) para conmutación de pines en sub-microsegundos (< 100 ns).

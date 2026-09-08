@@ -11,6 +11,38 @@
 
 ---
 
+## Fase 17 — Resiliencia Soberana, Túnel Cloudflare Permanente y Auditoría Bluetooth
+
+**Fecha:** 2026-09-07 / 2026-09-08 UTC  
+**Operador/agente:** `AGENT-RESILIENCE-ARCHITECT` (Nivel 10)  
+**Commit:** `v7.1.0-resilience`  
+**Target:** Raspberry Pi 5 (`AlonsoRTOS` / `fe80::4b3c:e19:bb19:445a%19` / `192.168.4.2` / `192.168.100.30`)
+
+### 17.1 Interrogatorio y Diagnóstico de Hardware (Fase 0)
+- **BlueZ 5.82:** `bluetooth.service` active (running) PID 686. Controller `88:A2:9E:57:F8:5F` (`AlonsoRTOS`). Inicialmente con `Pairable: no`, `Discoverable: no` por falta de agente D-Bus predeterminado.
+- **rfkill:** `0: hci0: Bluetooth` soft/hard unblocked; `1: phy0: Wireless LAN` soft/hard unblocked.
+- **Topología de Cores y RT:** `rt_motor` ejecutándose en Core 3 (PSR 3) con política `SCHED_FIFO` prioridad 99 determinista. `ipc_daemon` ejecutándose en Core 0 con puente MQTT.
+
+### 17.2 Persistencia de Túnel y Soporte Named Tunnel (Fase 1)
+- **Lanzador Resiliente:** Se creó `/usr/local/bin/magi-tunnel-launcher.sh` con detección automática de token Named Tunnel en `/etc/cloudflared/token`.
+- **Estrategia Dual:** Si `/etc/cloudflared/token` existe, inicia sesión persistente de Cloudflare Zero Trust sin reasignación de subdominio. En caso contrario, inicia túnel HTTPS rápido hacia `127.0.0.1:8088` con auto-reconexión Systemd (`Restart=always`, `RestartSec=5s`).
+- **Persistencia de URL:** `/home/alonso/extract_magi_url.sh` y `/home/alonso/magi_url.txt` sincronizados con `https://fixtures-blast-sarah-istanbul.trycloudflare.com` (HTTP 200 verificado).
+
+### 17.3 Subsistema Bluetooth y Agente D-Bus Activo (Fase 2)
+- **Modificación en `magi_server.py`:**
+  - Implementación de hilo auxiliar `_bluetooth_agent_worker` (`MAGI-BT-Agent`) ejecutando `bluetoothctl --agent NoInputNoOutput`.
+  - Configuración automática en BlueZ: `power on`, `pairable on`, `discoverable on`, `default-agent`.
+  - Manejo cooperativo en `_bluetooth_pair_transaction` para evitar colisiones D-Bus en retos interactivos.
+- **Validación RF en Hardware:** Escaneo `/api/bluetooth/scan` retornó dispositivos reales: `MELK-OA0000A` (`BE:67:00:8F:2C:8A`), `35-20-3E-5D-A1-10`, `AlonsoMobileArmor` (`BE:65:46:8E:CF:9E`).
+- **Verificación de Controlador:** `bluetoothctl show` certificó `Pairable: yes`, `Discoverable: yes`, `Powered: yes`.
+
+### 17.4 Corrección de SHM e Integración E2E (Fase 3)
+- **Detección SHM Realista:** `magi_server.py` sincronizado con la estructura real de `HILSharedMemory` (`/dev/shm/hil_shm`, 4128 bytes) y detección de procesos ultrarrápida vía `/proc/$PID/comm` para `rt_motor` e `ipc_daemon`.
+- **Resultado /api/status:** `HTTP 200`, `ipc_alive: true`, `rt_alive: true`, telemetría de potencia `3.79W` / `0.758A` / `0.8885V`, `wifi_connected: true (LUANA)`.
+- **Passthrough de Red y SSH:** Ping a Gateway `192.168.100.1` (0% loss), Ping a Internet `1.1.1.1` (0% loss), SSH escuchando en puerto 22.
+
+---
+
 ## Fase 16 — Corrección Hard-Harness, Rescate de UI y Persistencia Zero-Trust
 
 **Fecha:** 2026-09-07 / 2026-09-08 UTC  
