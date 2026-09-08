@@ -18,7 +18,7 @@
 | **Inmersión Sensorial Total** | [Acceder a Espejo Sensorial](https://magi-tunnel.example.org/mirror) | HUD de inmersión completa: streaming de video Wayland, control de puntero/teclado, micrófono remoto (PCM 16 kHz hacia ALSA loopback) y altavoz WebRTC. |
 | **Terminal Zero-Trust** | [Acceder a Terminal Web](https://magi-tunnel.example.org/terminal/) | Consola interactiva `ttyd` / Bash integrada directamente en el navegador, protegida por túnel TLS 1.3. |
 | **noVNC Puro** | [Acceder a noVNC Kiosk](https://magi-tunnel.example.org/vnc/vnc_lite.html) | Espejo de pantalla completa de bajo nivel sobre el compositor Wayland (`wayvnc` + `websockify`). Diagnóstico del escritorio en bruto. |
-| **Enlace SSH Global** | `ssh -p 6 user-host` | Túnel TCP inverso para administración remota por terminal SSH (autenticación mediante clave Ed25519). |
+| **Enlace SSH Global** | `ssh -p 443 user-host` | Túnel TCP inverso para administración remota por terminal SSH (autenticación mediante clave Ed25519). |
 
 ---
 
@@ -146,3 +146,26 @@ git checkout develop && git pull origin develop
 # Re-sincronizar el Gemelo Digital desde la Raspberry Pi:
 python scripts/automation/introspect.py && python scripts/automation/sync_digital_twin.py
 ```
+
+---
+
+## 6. Arquitectura de Túnel Permanente y Resiliencia Cloudflare
+
+Para garantizar conectividad remota ininterrumpida y soberana ante reinicios duros del hardware, el servicio `magi-tunnel.service` implementa un lanzador dinámico de alta disponibilidad (`/usr/local/bin/magi-tunnel-launcher.sh`):
+
+1. **Soporte de Cloudflare Named Tunnel:** Si `/etc/cloudflared/token` contiene un token válido de Cloudflare Zero Trust, el daemon inicia el túnel permanente asociado con dominio corporativo estático y sin dependencia de re-asignación de subdominios.
+2. **Contingencia Resiliente con Quick Tunnel:** Si no se suministra token, el sistema levanta automáticamente un túnel HTTPS rápido hacia `127.0.0.1:8088`. El script `extract_magi_url.sh` extrae y escribe inmediatamente la URL activa en `[HOME_REDACTED]`.
+3. **Persistencia Systemd:** El servicio está configurado con `Restart=always` y `RestartSec=5s`, recuperándose automáticamente ante desconexiones de red.
+
+---
+
+## 7. Subsistema Bluetooth y Agente D-Bus BlueZ
+
+El subsistema Bluetooth opera sobre BlueZ 5.82 y se encuentra totalmente integrado en el backend `magi_server.py` (Core 1):
+
+- **Agente de Emparejamiento Automático:** Un hilo auxiliar continuo (`MAGI-BT-Agent`) instancia `bluetoothctl --agent NoInputNoOutput`, registrándose como agente D-Bus predeterminado del sistema.
+- **Configuración de Radiofrecuencia:** Mantiene el controlador en modo `Powered: yes`, `Pairable: yes` y `Discoverable: yes`.
+- **API REST Integral:**
+  - `GET /api/bluetooth/scan`: Inicia descubrimiento por RF, parsea dispositivos detectados por BlueZ y retorna metadatos de vinculación.
+  - `POST /api/bluetooth/<action>`: Soporta acciones atómicas `pair`, `trust`, `connect` y `disconnect` con retrocompatibilidad para retos interactivos (PIN, passkey, confirmación).
+

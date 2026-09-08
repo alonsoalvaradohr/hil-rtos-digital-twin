@@ -1,5 +1,5 @@
 [Unit]
-Description=MAGI Cloudflare Quick Tunnel (tunnel.example.org -> :8088)
+Description=MAGI Resilient Cloudflare Tunnel (Permanent Named / Quick Fallback -> :8088)
 After=network-online.target nginx.service magi-ui.service
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=alonso
 Group=alonso
-ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8088 --no-autoupdate
+ExecStart=/usr/local/bin/magi-tunnel-launcher.sh
 ExecStartPost=[HOME_REDACTED]
 Restart=always
 RestartSec=5s
