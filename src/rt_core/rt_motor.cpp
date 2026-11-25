@@ -1,4 +1,6 @@
-﻿#include <iostream>
+﻿// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
+#include <iostream>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>

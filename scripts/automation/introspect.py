@@ -1,4 +1,6 @@
-﻿import paramiko
+﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
+import paramiko
 import json
 import os
 import sys

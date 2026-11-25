@@ -1,0 +1,41 @@
+name: Bug Report
+description: File a bug report, latency violation, or unexpected runtime error in HIL-RTOS Digital Twin.
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for reporting an issue in HIL-RTOS Digital Twin. Please fill out the sections below.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug or RTOS timing regression.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps or commands to reproduce the behavior.
+      placeholder: |
+        1. Run command ...
+        2. Inspect state ...
+        3. See error ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen (timing constraints, deterministic output, etc.).
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Kernel version, PREEMPT_RT status, and hardware platform (e.g. Raspberry Pi 5).
+      placeholder: e.g., Linux 6.6.20+rpt-rpi-2712 PREEMPT_RT on Raspberry Pi 5 8GB
+    validations:
+      required: false

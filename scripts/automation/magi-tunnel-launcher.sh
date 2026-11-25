@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
 # MAGI RESILIENT TUNNEL LAUNCHER
 # Si existe token de Cloudflare Zero Trust (Named Tunnel), ejecuta el túnel permanente.
 # En caso contrario, ejecuta el túnel rápido con auto-recuperación de conexión.

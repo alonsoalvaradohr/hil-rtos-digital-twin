@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
 import os
 
 def load_env(env_path=None):

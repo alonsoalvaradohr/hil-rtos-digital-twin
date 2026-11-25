@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
 # HIL-RTOS INPUT SUBSYSTEM VERIFICATION (evidence-based, no inferred success)
 # Usage: verify-input-stack.sh [--preflight|--certify|--certify-voice]
 set -uo pipefail

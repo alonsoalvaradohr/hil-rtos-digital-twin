@@ -1,4 +1,6 @@
-﻿import json
+﻿# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
+import json
 import os
 
 with open('E:/alons/Documents/Raspberry HIL/Digital_Twin_Workspace/raw_introspection.json', 'r', encoding='utf-8') as f:

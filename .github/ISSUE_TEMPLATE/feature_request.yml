@@ -1,0 +1,29 @@
+name: Feature Request
+description: Propose a new feature, real-time IPC module, or HIL capability for HIL-RTOS Digital Twin.
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for suggesting an improvement to HIL-RTOS Digital Twin.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement / Context
+      description: Is your feature request related to real-time scheduling, IPC shared memory, or digital twin telemetry?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: A clear description of what you want to happen and real-time architectural considerations.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you've considered.
+    validations:
+      required: false

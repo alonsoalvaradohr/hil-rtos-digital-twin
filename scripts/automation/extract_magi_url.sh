@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
 sleep 3
 # Si existe configuración de dominio estático persistente
 if [ -s /etc/cloudflared/domain ]; then

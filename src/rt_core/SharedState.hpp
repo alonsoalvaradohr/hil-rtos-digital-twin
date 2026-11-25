@@ -1,4 +1,6 @@
-﻿#ifndef SHARED_STATE_HPP
+﻿// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2024-2026 Alonso Alvarado Hernández <alonsoalvaradohr>
+#ifndef SHARED_STATE_HPP
 #define SHARED_STATE_HPP
 
 #include "LockFreeQueue.hpp"
